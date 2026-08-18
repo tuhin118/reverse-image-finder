@@ -2,6 +2,11 @@ name: Run reverse image finder
 
 on:
   workflow_dispatch:
+    inputs:
+      image_url:
+        description: "Image URL"
+        required: true
+        type: string
 
 jobs:
   run:
@@ -24,4 +29,4 @@ jobs:
         env:
           SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
         run: |
-          python main.py
+          echo "${{ inputs.image_url }}" | python main.py
