@@ -1131,8 +1131,7 @@ def search():
             upload_response.raise_for_status()
 
 
-            upload_data =
-                upload_response.json()
+            upload_data = upload_response.json()
 
 
             if not upload_data.get(
