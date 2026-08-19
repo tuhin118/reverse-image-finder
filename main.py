@@ -4,7 +4,7 @@ from flask import Flask, request, render_template_string
 
 app = Flask(__name__)
 
-# Maximum upload size: 10 MB
+# Maximum uploaded image size: 10 MB
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
 
 
@@ -24,6 +24,7 @@ HTML = """
 
         html, body {
             margin: 0;
+            padding: 0;
             min-height: 100%;
         }
 
@@ -33,10 +34,6 @@ HTML = """
             font-family: Arial, sans-serif;
             overflow-x: hidden;
         }
-
-        /* =========================
-           HACKER MATRIX BACKGROUND
-           ========================= */
 
         #matrix {
             position: fixed;
@@ -55,8 +52,8 @@ HTML = """
             background:
                 radial-gradient(
                     circle at center,
-                    rgba(0, 100, 255, 0.08),
-                    rgba(0, 0, 0, 0.82) 75%
+                    rgba(0, 100, 255, 0.10),
+                    rgba(0, 0, 0, 0.88) 80%
                 );
         }
 
@@ -77,34 +74,33 @@ HTML = """
         .container {
             width: min(900px, 92%);
             margin: auto;
-            padding: 45px 0;
+            padding: 40px 0 70px;
         }
 
         h1 {
             text-align: center;
-            font-size: 38px;
-            margin-bottom: 10px;
-            letter-spacing: 1px;
+            font-size: 36px;
+            margin: 0 0 10px;
             text-shadow:
-                0 0 10px rgba(0, 150, 255, .8),
-                0 0 25px rgba(0, 100, 255, .45);
+                0 0 10px rgba(0,150,255,.8),
+                0 0 25px rgba(0,100,255,.5);
         }
 
         .subtitle {
             text-align: center;
-            color: #8fa7bd;
-            margin-bottom: 35px;
+            color: #9aabba;
+            margin-bottom: 30px;
         }
 
         .box {
-            background: rgba(5, 15, 27, 0.88);
+            background: rgba(5,15,27,.90);
             backdrop-filter: blur(12px);
-            border: 1px solid rgba(0, 140, 255, .35);
+            border: 1px solid rgba(0,140,255,.35);
             border-radius: 22px;
-            padding: 25px;
+            padding: 24px;
             box-shadow:
-                0 15px 60px rgba(0,0,0,.6),
-                0 0 35px rgba(0,100,255,.08);
+                0 15px 60px rgba(0,0,0,.60),
+                0 0 35px rgba(0,100,255,.10);
         }
 
         .upload {
@@ -114,14 +110,14 @@ HTML = """
             padding: 35px 20px;
             text-align: center;
             cursor: pointer;
+            background: rgba(0,30,55,.30);
             transition: .25s;
-            background: rgba(0, 30, 55, .25);
         }
 
         .upload:hover {
             border-color: #159cff;
-            background: rgba(0, 80, 140, .18);
-            box-shadow: 0 0 25px rgba(0,140,255,.12);
+            background: rgba(0,80,140,.18);
+            box-shadow: 0 0 25px rgba(0,140,255,.15);
         }
 
         .upload input {
@@ -130,11 +126,21 @@ HTML = """
 
         .upload-title {
             font-size: 20px;
+            font-weight: bold;
             margin-bottom: 8px;
         }
 
         .upload-sub {
             color: #8999af;
+        }
+
+        #preview {
+            display: none;
+            max-width: 100%;
+            max-height: 300px;
+            margin: 20px auto 0;
+            border-radius: 15px;
+            border: 1px solid #1e5b8e;
         }
 
         .url-box {
@@ -146,14 +152,14 @@ HTML = """
             padding: 15px;
             border-radius: 12px;
             border: 1px solid #29415f;
-            background: rgba(3, 12, 23, .9);
+            background: rgba(3,12,23,.95);
             color: white;
             outline: none;
         }
 
         .url-box input:focus {
             border-color: #168cff;
-            box-shadow: 0 0 15px rgba(22,140,255,.18);
+            box-shadow: 0 0 15px rgba(22,140,255,.20);
         }
 
         .search-btn {
@@ -181,15 +187,6 @@ HTML = """
             box-shadow: 0 0 25px rgba(22,140,255,.35);
         }
 
-        #preview {
-            display: none;
-            max-width: 100%;
-            max-height: 300px;
-            margin: 20px auto 0;
-            border-radius: 15px;
-            border: 1px solid #1e5b8e;
-        }
-
         .scanner {
             display: none;
             margin-top: 30px;
@@ -198,7 +195,7 @@ HTML = """
 
         .scan-frame {
             position: relative;
-            width: min(500px, 100%);
+            width: min(500px,100%);
             height: 330px;
             margin: auto;
             overflow: hidden;
@@ -225,17 +222,9 @@ HTML = """
         }
 
         @keyframes scan {
-            0% {
-                top: 0;
-            }
-
-            50% {
-                top: calc(100% - 3px);
-            }
-
-            100% {
-                top: 0;
-            }
+            0% { top: 0; }
+            50% { top: calc(100% - 3px); }
+            100% { top: 0; }
         }
 
         .scanning-text {
@@ -250,29 +239,18 @@ HTML = """
         }
 
         @keyframes dots {
-            0% {
-                content: "";
-            }
-
-            33% {
-                content: ".";
-            }
-
-            66% {
-                content: "..";
-            }
-
-            100% {
-                content: "...";
-            }
+            0% { content: ""; }
+            33% { content: "."; }
+            66% { content: ".."; }
+            100% { content: "..."; }
         }
 
         .results {
-            margin-top: 35px;
+            margin-top: 30px;
         }
 
         .result {
-            background: rgba(7, 18, 32, .9);
+            background: rgba(7,18,32,.92);
             border: 1px solid #1c3453;
             border-radius: 14px;
             padding: 17px;
@@ -286,6 +264,11 @@ HTML = """
             box-shadow: 0 5px 25px rgba(0,100,255,.12);
         }
 
+        .result-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
         .result a {
             color: #55b4ff;
             text-decoration: none;
@@ -296,42 +279,41 @@ HTML = """
             text-decoration: underline;
         }
 
-        .result-title {
-            font-weight: bold;
-            margin-bottom: 8px;
-        }
-
         .error {
             margin-top: 20px;
             padding: 15px;
-            background: rgba(80, 15, 25, .9);
+            background: rgba(80,15,25,.92);
             border: 1px solid #7e2935;
             border-radius: 12px;
         }
 
-        /* =========================
-           CREATOR CREDIT
-           ========================= */
+        .empty {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(5,30,50,.90);
+            border: 1px solid #245b91;
+            border-radius: 12px;
+            text-align: center;
+            color: #9bb3c8;
+        }
 
         .creator-credit {
             position: fixed;
-            bottom: 12px;
+            bottom: 10px;
             left: 0;
             width: 100%;
             text-align: center;
             font-size: 12px;
-            color: rgba(120, 190, 230, 0.65);
+            color: rgba(120,190,230,.70);
             letter-spacing: 1px;
-            z-index: 10;
+            z-index: 20;
             pointer-events: none;
-            text-shadow:
-                0 0 8px rgba(0, 140, 255, 0.5);
+            text-shadow: 0 0 8px rgba(0,140,255,.55);
         }
 
         @media (max-width: 600px) {
-
             .container {
-                padding: 25px 0;
+                padding: 25px 0 65px;
             }
 
             h1 {
@@ -348,11 +330,8 @@ HTML = """
 <body>
 
 <canvas id="matrix"></canvas>
-
 <div class="matrix-overlay"></div>
-
 <div class="scanlines"></div>
-
 
 <div class="container">
 
@@ -361,7 +340,6 @@ HTML = """
     <div class="subtitle">
         Find pages and websites where an image appears
     </div>
-
 
     <div class="box">
 
@@ -391,9 +369,7 @@ HTML = """
 
             </label>
 
-
-            <img id="preview">
-
+            <img id="preview" alt="Preview">
 
             <div class="url-box">
 
@@ -405,19 +381,26 @@ HTML = """
 
             </div>
 
-
-            <button class="search-btn" type="submit">
+            <button
+                class="search-btn"
+                type="submit"
+            >
                 🔍 Search Image
             </button>
 
         </form>
 
-
-        <div class="scanner" id="scanner">
+        <div
+            class="scanner"
+            id="scanner"
+        >
 
             <div class="scan-frame">
 
-                <img id="scanImage">
+                <img
+                    id="scanImage"
+                    alt="Scanning"
+                >
 
                 <div class="scan-line"></div>
 
@@ -431,7 +414,6 @@ HTML = """
 
     </div>
 
-
     {% if error %}
 
         <div class="error">
@@ -439,7 +421,6 @@ HTML = """
         </div>
 
     {% endif %}
-
 
     {% if results %}
 
@@ -469,12 +450,15 @@ HTML = """
 
         </div>
 
+    {% elif searched %}
+
+        <div class="empty">
+            No visual matches were found for this image.
+        </div>
+
     {% endif %}
 
 </div>
-
-
-<!-- CREATOR CREDIT -->
 
 <div class="creator-credit">
     Built by Tuhin
@@ -483,146 +467,89 @@ HTML = """
 
 <script>
 
-/* =========================
-   IMAGE PREVIEW
-   ========================= */
-
 function previewImage(event) {
 
-    const file =
-        event.target.files[0];
+    const file = event.target.files[0];
 
-    if (!file) return;
+    if (!file) {
+        return;
+    }
 
+    const preview = document.getElementById("preview");
 
-    const preview =
-        document.getElementById("preview");
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = "block";
 
-    preview.src =
-        URL.createObjectURL(file);
-
-    preview.style.display =
-        "block";
-
-
-    const urlInput =
-        document.querySelector(
-            'input[name="image_url"]'
-        );
-
-    urlInput.required =
-        false;
+    document.querySelector(
+        'input[name="image_url"]'
+    ).value = "";
 }
 
 
-/* =========================
-   SCANNER ANIMATION
-   ========================= */
-
 function startScan() {
 
-    const fileInput =
-        document.querySelector(
-            'input[name="image"]'
-        );
+    const fileInput = document.querySelector(
+        'input[name="image"]'
+    );
 
-    const urlInput =
-        document.querySelector(
-            'input[name="image_url"]'
-        );
+    const urlInput = document.querySelector(
+        'input[name="image_url"]'
+    );
 
-    const scanner =
-        document.getElementById(
-            "scanner"
-        );
+    const scanner = document.getElementById(
+        "scanner"
+    );
 
-    const scanImage =
-        document.getElementById(
-            "scanImage"
-        );
-
+    const scanImage = document.getElementById(
+        "scanImage"
+    );
 
     if (fileInput.files.length > 0) {
 
-        scanImage.src =
-            URL.createObjectURL(
-                fileInput.files[0]
-            );
+        scanImage.src = URL.createObjectURL(
+            fileInput.files[0]
+        );
 
-    } else if (urlInput.value) {
+    } else if (urlInput.value.trim()) {
 
-        scanImage.src =
-            urlInput.value;
+        scanImage.src = urlInput.value.trim();
 
     } else {
 
         return;
     }
 
-
-    scanner.style.display =
-        "block";
+    scanner.style.display = "block";
 }
 
 
-/* =========================
-   TUHIN MATRIX ANIMATION
-   ========================= */
-
-const canvas =
-    document.getElementById(
-        "matrix"
-    );
-
-const ctx =
-    canvas.getContext("2d");
-
+const canvas = document.getElementById("matrix");
+const ctx = canvas.getContext("2d");
 
 let width;
 let height;
 let columns;
 let drops;
 
-
-/*
- * Only TUHIN letters
- */
-
-const characters =
-    "TUHIN";
+const characters = "TUHIN";
 
 
 function resizeMatrix() {
 
-    width =
-        canvas.width =
-        window.innerWidth;
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
 
-    height =
-        canvas.height =
-        window.innerHeight;
+    const fontSize = 16;
 
+    columns = Math.floor(width / fontSize);
 
-    const fontSize =
-        16;
-
-
-    columns =
-        Math.floor(
-            width / fontSize
-        );
-
-
-    drops =
-        Array(columns).fill(1);
+    drops = Array(columns).fill(1);
 }
 
 
 function drawMatrix() {
 
-    ctx.fillStyle =
-        "rgba(2, 6, 9, 0.075)";
-
+    ctx.fillStyle = "rgba(2,6,9,0.075)";
 
     ctx.fillRect(
         0,
@@ -631,47 +558,25 @@ function drawMatrix() {
         height
     );
 
+    const fontSize = 16;
 
-    const fontSize =
-        16;
+    ctx.font = "bold " + fontSize + "px monospace";
 
+    for (let i = 0; i < drops.length; i++) {
 
-    ctx.font =
-        "bold " +
-        fontSize +
-        "px monospace";
-
-
-    for (
-        let i = 0;
-        i < drops.length;
-        i++
-    ) {
-
-        const text =
-            characters.charAt(
-                Math.floor(
-                    Math.random() *
-                    characters.length
-                )
-            );
-
-
-        /*
-         * Hacker blue glow
-         */
+        const text = characters.charAt(
+            Math.floor(
+                Math.random() * characters.length
+            )
+        );
 
         ctx.fillStyle =
             Math.random() > 0.90
                 ? "#63d4ff"
                 : "#087ac1";
 
-
         ctx.shadowBlur = 8;
-
-        ctx.shadowColor =
-            "#008cff";
-
+        ctx.shadowColor = "#008cff";
 
         ctx.fillText(
             text,
@@ -679,19 +584,14 @@ function drawMatrix() {
             drops[i] * fontSize
         );
 
-
         ctx.shadowBlur = 0;
 
-
         if (
-            drops[i] * fontSize >
-            height &&
+            drops[i] * fontSize > height &&
             Math.random() > 0.975
         ) {
-
             drops[i] = 0;
         }
-
 
         drops[i]++;
     }
@@ -700,12 +600,10 @@ function drawMatrix() {
 
 resizeMatrix();
 
-
 window.addEventListener(
     "resize",
     resizeMatrix
 );
-
 
 setInterval(
     drawMatrix,
@@ -721,115 +619,99 @@ setInterval(
 
 @app.route("/", methods=["GET"])
 def home():
-
     return render_template_string(
-        HTML
+        HTML,
+        error=None,
+        results=None,
+        searched=False
     )
 
 
 @app.route("/search", methods=["POST"])
 def search():
 
-    serpapi_key =
-        os.getenv("SERPAPI_KEY")
+    serpapi_key = os.getenv("SERPAPI_KEY")
+    imgbb_key = os.getenv("IMGBB_API_KEY")
 
-    imgbb_key =
-        os.getenv("IMGBB_API_KEY")
+    image_url = request.form.get(
+        "image_url",
+        ""
+    ).strip()
 
-
-    image_url =
-        request.form.get(
-            "image_url",
-            ""
-        ).strip()
+    uploaded_file = request.files.get("image")
 
 
-    uploaded_file =
-        request.files.get(
-            "image"
-        )
-
-
-    # =========================
-    # SERPAPI KEY
-    # =========================
-
+    # Check SerpApi API key
     if not serpapi_key:
 
         return render_template_string(
             HTML,
-            error=
-                "SERPAPI_KEY is not configured."
+            error="SERPAPI_KEY is not configured.",
+            results=None,
+            searched=False
         )
 
 
-    # =========================
-    # UPLOADED IMAGE
-    # =========================
-
-    if (
-        uploaded_file
-        and
-        uploaded_file.filename
-    ):
+    # If a file was uploaded
+    if uploaded_file and uploaded_file.filename:
 
         if not imgbb_key:
 
             return render_template_string(
                 HTML,
-                error=
-                    "IMGBB_API_KEY is not configured. Add it in Render Environment Variables."
+                error=(
+                    "IMGBB_API_KEY is not configured. "
+                    "Add it in Render Environment Variables."
+                ),
+                results=None,
+                searched=False
             )
-
 
         try:
 
-            file_data =
-                uploaded_file.read()
+            file_data = uploaded_file.read()
 
-
-            upload_response =
-                requests.post(
-
-                    "https://api.imgbb.com/1/upload",
-
-                    params={
-                        "key":
-                            imgbb_key
-                    },
-
-                    files={
-                        "image": (
-                            uploaded_file.filename,
-                            file_data,
-                            uploaded_file.mimetype
-                        )
-                    },
-
-                    timeout=60
-                )
-
-
-            upload_response.raise_for_status()
-
-
-            upload_data =
-                upload_response.json()
-
-
-            if not upload_data.get(
-                "success"
-            ):
+            if not file_data:
 
                 return render_template_string(
                     HTML,
-                    error=
-                        "Image upload failed."
+                    error="The uploaded image is empty.",
+                    results=None,
+                    searched=False
+                )
+
+
+            upload_response = requests.post(
+                "https://api.imgbb.com/1/upload",
+                params={
+                    "key": imgbb_key
+                },
+                files={
+                    "image": (
+                        uploaded_file.filename,
+                        file_data,
+                        uploaded_file.mimetype
+                    )
+                },
+                timeout=60
+            )
+
+            upload_response.raise_for_status()
+
+            upload_data = upload_response.json()
+
+
+            if not upload_data.get("success"):
+
+                return render_template_string(
+                    HTML,
+                    error="ImgBB image upload failed.",
+                    results=None,
+                    searched=False
                 )
 
 
             image_url = (
-
                 upload_data
                 .get("data", {})
                 .get("url", "")
@@ -840,8 +722,12 @@ def search():
 
                 return render_template_string(
                     HTML,
-                    error=
-                        "Could not create a public image URL."
+                    error=(
+                        "ImgBB did not return a public "
+                        "image URL."
+                    ),
+                    results=None,
+                    searched=False
                 )
 
 
@@ -849,70 +735,60 @@ def search():
 
             return render_template_string(
                 HTML,
-                error=
-                    f"Image upload failed: {e}"
+                error=(
+                    "Image upload request failed: "
+                    + str(e)
+                ),
+                results=None,
+                searched=False
             )
 
 
-    # =========================
-    # IMAGE URL CHECK
-    # =========================
-
+    # If neither upload nor URL was provided
     if not image_url:
 
         return render_template_string(
             HTML,
-            error=
-                "Please upload an image or provide an image URL."
+            error=(
+                "Please upload an image or "
+                "provide an image URL."
+            ),
+            results=None,
+            searched=False
         )
 
 
-    # =========================
-    # SERPAPI GOOGLE LENS
-    # =========================
-
+    # Google Lens / SerpApi request
     params = {
-
-        "engine":
-            "google_lens",
-
-        "url":
-            image_url,
-
-        "api_key":
-            serpapi_key
+        "engine": "google_lens",
+        "url": image_url,
+        "api_key": serpapi_key
     }
 
 
     try:
 
-        response =
-            requests.get(
-
-                "https://serpapi.com/search.json",
-
-                params=params,
-
-                timeout=60
-            )
-
+        response = requests.get(
+            "https://serpapi.com/search.json",
+            params=params,
+            timeout=60
+        )
 
         response.raise_for_status()
 
-
-        data =
-            response.json()
+        data = response.json()
 
 
         if data.get("error"):
 
             return render_template_string(
                 HTML,
-                error=
-                    data.get(
-                        "error",
-                        "SerpApi search failed."
-                    )
+                error=data.get(
+                    "error",
+                    "SerpApi search failed."
+                ),
+                results=None,
+                searched=False
             )
 
 
@@ -924,34 +800,28 @@ def search():
             []
         ):
 
-            link =
-                item.get(
-                    "link",
-                    ""
-                )
-
+            link = item.get(
+                "link",
+                ""
+            )
 
             if not link:
-
                 continue
 
-
             results.append({
-
-                "title":
-                    item.get(
-                        "title",
-                        "Untitled"
-                    ),
-
-                "link":
-                    link
+                "title": item.get(
+                    "title",
+                    "Untitled"
+                ),
+                "link": link
             })
 
 
         return render_template_string(
             HTML,
-            results=results
+            error=None,
+            results=results,
+            searched=True
         )
 
 
@@ -959,8 +829,12 @@ def search():
 
         return render_template_string(
             HTML,
-            error=
-                f"Search request failed: {e}"
+            error=(
+                "Search request failed: "
+                + str(e)
+            ),
+            results=None,
+            searched=False
         )
 
 
@@ -968,29 +842,26 @@ def search():
 def file_too_large(error):
 
     return render_template_string(
-
         HTML,
-
-        error=
-            "Image is too large. Maximum size is 10 MB."
-
+        error=(
+            "Image is too large. "
+            "Maximum allowed size is 10 MB."
+        ),
+        results=None,
+        searched=False
     ), 413
 
 
 if __name__ == "__main__":
 
-    port =
-        int(
-            os.environ.get(
-                "PORT",
-                5000
-            )
+    port = int(
+        os.environ.get(
+            "PORT",
+            "5000"
         )
-
+    )
 
     app.run(
-
         host="0.0.0.0",
-
         port=port
-)
+    )
