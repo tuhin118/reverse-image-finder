@@ -12,8 +12,8 @@ app = Flask(__name__)
 # Maximum upload size: 30 MB
 app.config["MAX_CONTENT_LENGTH"] = 30 * 1024 * 1024
 
-# Only show results with 90% or higher visual similarity
-SIMILARITY_THRESHOLD = 90
+# Only show results with 70% or higher visual similarity
+SIMILARITY_THRESHOLD = 70
 
 
 # =========================================================
@@ -1299,10 +1299,10 @@ def search():
         if not link:
             continue
 
-        similarity = calculate_similarity(
+        similarity =calculate_similarity(
             source_image,
             link
-        )
+      )
 
         if similarity >= SIMILARITY_THRESHOLD:
 
