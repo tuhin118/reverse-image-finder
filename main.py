@@ -1282,7 +1282,7 @@ def search():
 
 
     for item in data.get(
-        "organic_results",
+        "visual_matches",
         []
     ):
 
