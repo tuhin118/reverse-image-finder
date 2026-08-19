@@ -1,9 +1,12 @@
-
 import os
 import requests
 from flask import Flask, request, render_template_string
 
 app = Flask(__name__)
+
+# Maximum upload size: 10 MB
+app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
+
 
 HTML = """
 <!DOCTYPE html>
@@ -11,6 +14,7 @@ HTML = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Reverse Image Finder</title>
 
     <style>
@@ -18,12 +22,56 @@ HTML = """
             box-sizing: border-box;
         }
 
-        body {
+        html, body {
             margin: 0;
-            min-height: 100vh;
-            background: #050b18;
+            min-height: 100%;
+        }
+
+        body {
+            background: #020609;
             color: white;
             font-family: Arial, sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* =========================
+           HACKER MATRIX BACKGROUND
+           ========================= */
+
+        #matrix {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -3;
+            background: #020609;
+        }
+
+        .matrix-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: -2;
+            pointer-events: none;
+            background:
+                radial-gradient(
+                    circle at center,
+                    rgba(0, 100, 255, 0.08),
+                    rgba(0, 0, 0, 0.82) 75%
+                );
+        }
+
+        .scanlines {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+            background: repeating-linear-gradient(
+                to bottom,
+                rgba(255,255,255,0.015) 0px,
+                rgba(255,255,255,0.015) 1px,
+                transparent 1px,
+                transparent 4px
+            );
         }
 
         .container {
@@ -34,34 +82,46 @@ HTML = """
 
         h1 {
             text-align: center;
-            font-size: 34px;
+            font-size: 38px;
             margin-bottom: 10px;
+            letter-spacing: 1px;
+            text-shadow:
+                0 0 10px rgba(0, 150, 255, .8),
+                0 0 25px rgba(0, 100, 255, .45);
         }
 
         .subtitle {
             text-align: center;
-            color: #9aa8bd;
+            color: #8fa7bd;
             margin-bottom: 35px;
         }
 
         .box {
-            background: #0b1426;
-            border: 1px solid #1b3152;
+            background: rgba(5, 15, 27, 0.88);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 140, 255, .35);
             border-radius: 22px;
             padding: 25px;
-            box-shadow: 0 15px 50px rgba(0,0,0,.35);
+            box-shadow:
+                0 15px 60px rgba(0,0,0,.6),
+                0 0 35px rgba(0,100,255,.08);
         }
 
         .upload {
-            border: 2px dashed #245b91;
+            display: block;
+            border: 2px dashed #176aa5;
             border-radius: 18px;
             padding: 35px 20px;
             text-align: center;
             cursor: pointer;
+            transition: .25s;
+            background: rgba(0, 30, 55, .25);
         }
 
         .upload:hover {
-            border-color: #168cff;
+            border-color: #159cff;
+            background: rgba(0, 80, 140, .18);
+            box-shadow: 0 0 25px rgba(0,140,255,.12);
         }
 
         .upload input {
@@ -86,9 +146,14 @@ HTML = """
             padding: 15px;
             border-radius: 12px;
             border: 1px solid #29415f;
-            background: #07101f;
+            background: rgba(3, 12, 23, .9);
             color: white;
             outline: none;
+        }
+
+        .url-box input:focus {
+            border-color: #168cff;
+            box-shadow: 0 0 15px rgba(22,140,255,.18);
         }
 
         .search-btn {
@@ -97,15 +162,23 @@ HTML = """
             padding: 15px;
             border: 0;
             border-radius: 12px;
-            background: #168cff;
+            background: linear-gradient(
+                90deg,
+                #086fd1,
+                #168cff,
+                #086fd1
+            );
+            background-size: 200% 100%;
             color: white;
             font-size: 17px;
             font-weight: bold;
             cursor: pointer;
+            transition: .25s;
         }
 
         .search-btn:hover {
-            background: #0877df;
+            background-position: 100% 0;
+            box-shadow: 0 0 25px rgba(22,140,255,.35);
         }
 
         #preview {
@@ -114,6 +187,7 @@ HTML = """
             max-height: 300px;
             margin: 20px auto 0;
             border-radius: 15px;
+            border: 1px solid #1e5b8e;
         }
 
         .scanner {
@@ -131,6 +205,7 @@ HTML = """
             border: 2px solid #168cff;
             border-radius: 20px;
             background: #020713;
+            box-shadow: 0 0 30px rgba(0,140,255,.18);
         }
 
         .scan-frame img {
@@ -150,14 +225,23 @@ HTML = """
         }
 
         @keyframes scan {
-            0% { top: 0; }
-            50% { top: calc(100% - 3px); }
-            100% { top: 0; }
+            0% {
+                top: 0;
+            }
+
+            50% {
+                top: calc(100% - 3px);
+            }
+
+            100% {
+                top: 0;
+            }
         }
 
         .scanning-text {
             margin-top: 18px;
             font-size: 20px;
+            color: #63bdff;
         }
 
         .dots::after {
@@ -166,10 +250,21 @@ HTML = """
         }
 
         @keyframes dots {
-            0% { content: ""; }
-            33% { content: "."; }
-            66% { content: ".."; }
-            100% { content: "..."; }
+            0% {
+                content: "";
+            }
+
+            33% {
+                content: ".";
+            }
+
+            66% {
+                content: "..";
+            }
+
+            100% {
+                content: "...";
+            }
         }
 
         .results {
@@ -177,17 +272,28 @@ HTML = """
         }
 
         .result {
-            background: #0b1426;
+            background: rgba(7, 18, 32, .9);
             border: 1px solid #1c3453;
             border-radius: 14px;
             padding: 17px;
             margin-bottom: 12px;
+            transition: .2s;
+        }
+
+        .result:hover {
+            border-color: #168cff;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 25px rgba(0,100,255,.12);
         }
 
         .result a {
             color: #55b4ff;
             text-decoration: none;
             word-break: break-word;
+        }
+
+        .result a:hover {
+            text-decoration: underline;
         }
 
         .result-title {
@@ -198,42 +304,107 @@ HTML = """
         .error {
             margin-top: 20px;
             padding: 15px;
-            background: #39151b;
+            background: rgba(80, 15, 25, .9);
             border: 1px solid #7e2935;
             border-radius: 12px;
+        }
+
+        /* =========================
+           CREATOR CREDIT
+           ========================= */
+
+        .creator-credit {
+            position: fixed;
+            bottom: 12px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 12px;
+            color: rgba(120, 190, 230, 0.65);
+            letter-spacing: 1px;
+            z-index: 10;
+            pointer-events: none;
+            text-shadow:
+                0 0 8px rgba(0, 140, 255, 0.5);
+        }
+
+        @media (max-width: 600px) {
+
+            .container {
+                padding: 25px 0;
+            }
+
+            h1 {
+                font-size: 30px;
+            }
+
+            .box {
+                padding: 18px;
+            }
         }
     </style>
 </head>
 
 <body>
 
+<canvas id="matrix"></canvas>
+
+<div class="matrix-overlay"></div>
+
+<div class="scanlines"></div>
+
+
 <div class="container">
 
-    <h1>Reverse Image Finder</h1>
+    <h1>🔎 Reverse Image Finder</h1>
+
     <div class="subtitle">
         Find pages and websites where an image appears
     </div>
 
+
     <div class="box">
 
-        <form method="POST" action="/search" onsubmit="startScan()">
+        <form
+            method="POST"
+            action="/search"
+            enctype="multipart/form-data"
+            onsubmit="startScan()"
+        >
 
             <label class="upload">
-                <div class="upload-title">📷 Upload an image</div>
-                <div class="upload-sub">Choose an image from your device</div>
-                <input type="file" accept="image/*" onchange="previewImage(event)">
+
+                <div class="upload-title">
+                    📷 Upload an image
+                </div>
+
+                <div class="upload-sub">
+                    Choose an image from your device
+                </div>
+
+                <input
+                    type="file"
+                    name="image"
+                    accept="image/*"
+                    onchange="previewImage(event)"
+                >
+
             </label>
+
 
             <img id="preview">
 
+
             <div class="url-box">
+
                 <input
                     type="url"
                     name="image_url"
                     placeholder="Or paste an image URL here..."
-                    required
                 >
+
             </div>
+
 
             <button class="search-btn" type="submit">
                 🔍 Search Image
@@ -241,11 +412,15 @@ HTML = """
 
         </form>
 
+
         <div class="scanner" id="scanner">
 
             <div class="scan-frame">
+
                 <img id="scanImage">
+
                 <div class="scan-line"></div>
+
             </div>
 
             <div class="scanning-text">
@@ -256,66 +431,286 @@ HTML = """
 
     </div>
 
+
     {% if error %}
+
         <div class="error">
-            {{ error }}
+            ⚠️ {{ error }}
         </div>
+
     {% endif %}
 
+
     {% if results %}
+
         <div class="results">
 
             <h2>🔎 Search Results</h2>
 
             {% for result in results %}
+
                 <div class="result">
 
                     <div class="result-title">
                         {{ loop.index }}. {{ result.title }}
                     </div>
 
-                    <a href="{{ result.link }}" target="_blank" rel="noopener">
+                    <a
+                        href="{{ result.link }}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
                         {{ result.link }}
                     </a>
 
                 </div>
+
             {% endfor %}
 
         </div>
+
     {% endif %}
 
 </div>
 
+
+<!-- CREATOR CREDIT -->
+
+<div class="creator-credit">
+    Built by Tuhin
+</div>
+
+
 <script>
 
+/* =========================
+   IMAGE PREVIEW
+   ========================= */
+
 function previewImage(event) {
-    const file = event.target.files[0];
+
+    const file =
+        event.target.files[0];
 
     if (!file) return;
 
-    const preview = document.getElementById("preview");
-    preview.src = URL.createObjectURL(file);
-    preview.style.display = "block";
 
-    document.querySelector('input[name="image_url"]').required = false;
+    const preview =
+        document.getElementById("preview");
+
+    preview.src =
+        URL.createObjectURL(file);
+
+    preview.style.display =
+        "block";
+
+
+    const urlInput =
+        document.querySelector(
+            'input[name="image_url"]'
+        );
+
+    urlInput.required =
+        false;
 }
+
+
+/* =========================
+   SCANNER ANIMATION
+   ========================= */
 
 function startScan() {
 
-    const url = document.querySelector('input[name="image_url"]').value;
-    const preview = document.getElementById("preview");
+    const fileInput =
+        document.querySelector(
+            'input[name="image"]'
+        );
 
-    const scanner = document.getElementById("scanner");
-    const scanImage = document.getElementById("scanImage");
+    const urlInput =
+        document.querySelector(
+            'input[name="image_url"]'
+        );
 
-    if (preview.src) {
-        scanImage.src = preview.src;
-    } else if (url) {
-        scanImage.src = url;
+    const scanner =
+        document.getElementById(
+            "scanner"
+        );
+
+    const scanImage =
+        document.getElementById(
+            "scanImage"
+        );
+
+
+    if (fileInput.files.length > 0) {
+
+        scanImage.src =
+            URL.createObjectURL(
+                fileInput.files[0]
+            );
+
+    } else if (urlInput.value) {
+
+        scanImage.src =
+            urlInput.value;
+
+    } else {
+
+        return;
     }
 
-    scanner.style.display = "block";
+
+    scanner.style.display =
+        "block";
 }
+
+
+/* =========================
+   TUHIN MATRIX ANIMATION
+   ========================= */
+
+const canvas =
+    document.getElementById(
+        "matrix"
+    );
+
+const ctx =
+    canvas.getContext("2d");
+
+
+let width;
+let height;
+let columns;
+let drops;
+
+
+/*
+ * Only TUHIN letters
+ */
+
+const characters =
+    "TUHIN";
+
+
+function resizeMatrix() {
+
+    width =
+        canvas.width =
+        window.innerWidth;
+
+    height =
+        canvas.height =
+        window.innerHeight;
+
+
+    const fontSize =
+        16;
+
+
+    columns =
+        Math.floor(
+            width / fontSize
+        );
+
+
+    drops =
+        Array(columns).fill(1);
+}
+
+
+function drawMatrix() {
+
+    ctx.fillStyle =
+        "rgba(2, 6, 9, 0.075)";
+
+
+    ctx.fillRect(
+        0,
+        0,
+        width,
+        height
+    );
+
+
+    const fontSize =
+        16;
+
+
+    ctx.font =
+        "bold " +
+        fontSize +
+        "px monospace";
+
+
+    for (
+        let i = 0;
+        i < drops.length;
+        i++
+    ) {
+
+        const text =
+            characters.charAt(
+                Math.floor(
+                    Math.random() *
+                    characters.length
+                )
+            );
+
+
+        /*
+         * Hacker blue glow
+         */
+
+        ctx.fillStyle =
+            Math.random() > 0.90
+                ? "#63d4ff"
+                : "#087ac1";
+
+
+        ctx.shadowBlur = 8;
+
+        ctx.shadowColor =
+            "#008cff";
+
+
+        ctx.fillText(
+            text,
+            i * fontSize,
+            drops[i] * fontSize
+        );
+
+
+        ctx.shadowBlur = 0;
+
+
+        if (
+            drops[i] * fontSize >
+            height &&
+            Math.random() > 0.975
+        ) {
+
+            drops[i] = 0;
+        }
+
+
+        drops[i]++;
+    }
+}
+
+
+resizeMatrix();
+
+
+window.addEventListener(
+    "resize",
+    resizeMatrix
+);
+
+
+setInterval(
+    drawMatrix,
+    45
+);
 
 </script>
 
@@ -326,64 +721,276 @@ function startScan() {
 
 @app.route("/", methods=["GET"])
 def home():
-    return render_template_string(HTML)
+
+    return render_template_string(
+        HTML
+    )
 
 
 @app.route("/search", methods=["POST"])
 def search():
 
-    api_key = os.getenv("SERPAPI_KEY")
-    image_url = request.form.get("image_url", "").strip()
+    serpapi_key =
+        os.getenv("SERPAPI_KEY")
 
-    if not api_key:
+    imgbb_key =
+        os.getenv("IMGBB_API_KEY")
+
+
+    image_url =
+        request.form.get(
+            "image_url",
+            ""
+        ).strip()
+
+
+    uploaded_file =
+        request.files.get(
+            "image"
+        )
+
+
+    # =========================
+    # SERPAPI KEY
+    # =========================
+
+    if not serpapi_key:
+
         return render_template_string(
             HTML,
-            error="SERPAPI_KEY is not configured."
+            error=
+                "SERPAPI_KEY is not configured."
         )
+
+
+    # =========================
+    # UPLOADED IMAGE
+    # =========================
+
+    if (
+        uploaded_file
+        and
+        uploaded_file.filename
+    ):
+
+        if not imgbb_key:
+
+            return render_template_string(
+                HTML,
+                error=
+                    "IMGBB_API_KEY is not configured. Add it in Render Environment Variables."
+            )
+
+
+        try:
+
+            file_data =
+                uploaded_file.read()
+
+
+            upload_response =
+                requests.post(
+
+                    "https://api.imgbb.com/1/upload",
+
+                    params={
+                        "key":
+                            imgbb_key
+                    },
+
+                    files={
+                        "image": (
+                            uploaded_file.filename,
+                            file_data,
+                            uploaded_file.mimetype
+                        )
+                    },
+
+                    timeout=60
+                )
+
+
+            upload_response.raise_for_status()
+
+
+            upload_data =
+                upload_response.json()
+
+
+            if not upload_data.get(
+                "success"
+            ):
+
+                return render_template_string(
+                    HTML,
+                    error=
+                        "Image upload failed."
+                )
+
+
+            image_url = (
+
+                upload_data
+                .get("data", {})
+                .get("url", "")
+            )
+
+
+            if not image_url:
+
+                return render_template_string(
+                    HTML,
+                    error=
+                        "Could not create a public image URL."
+                )
+
+
+        except requests.RequestException as e:
+
+            return render_template_string(
+                HTML,
+                error=
+                    f"Image upload failed: {e}"
+            )
+
+
+    # =========================
+    # IMAGE URL CHECK
+    # =========================
 
     if not image_url:
+
         return render_template_string(
             HTML,
-            error="Please provide an image URL."
+            error=
+                "Please upload an image or provide an image URL."
         )
+
+
+    # =========================
+    # SERPAPI GOOGLE LENS
+    # =========================
 
     params = {
-        "engine": "google_lens",
-        "url": image_url,
-        "api_key": api_key
+
+        "engine":
+            "google_lens",
+
+        "url":
+            image_url,
+
+        "api_key":
+            serpapi_key
     }
 
+
     try:
-        response = requests.get(
-            "https://serpapi.com/search.json",
-            params=params,
-            timeout=60
-        )
+
+        response =
+            requests.get(
+
+                "https://serpapi.com/search.json",
+
+                params=params,
+
+                timeout=60
+            )
+
 
         response.raise_for_status()
 
-        data = response.json()
+
+        data =
+            response.json()
+
+
+        if data.get("error"):
+
+            return render_template_string(
+                HTML,
+                error=
+                    data.get(
+                        "error",
+                        "SerpApi search failed."
+                    )
+            )
+
 
         results = []
 
-        for item in data.get("visual_matches", []):
+
+        for item in data.get(
+            "visual_matches",
+            []
+        ):
+
+            link =
+                item.get(
+                    "link",
+                    ""
+                )
+
+
+            if not link:
+
+                continue
+
+
             results.append({
-                "title": item.get("title", "Untitled"),
-                "link": item.get("link", "")
+
+                "title":
+                    item.get(
+                        "title",
+                        "Untitled"
+                    ),
+
+                "link":
+                    link
             })
+
 
         return render_template_string(
             HTML,
             results=results
         )
 
+
     except requests.RequestException as e:
+
         return render_template_string(
             HTML,
-            error=f"Search request failed: {e}"
+            error=
+                f"Search request failed: {e}"
         )
 
 
+@app.errorhandler(413)
+def file_too_large(error):
+
+    return render_template_string(
+
+        HTML,
+
+        error=
+            "Image is too large. Maximum size is 10 MB."
+
+    ), 413
+
+
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+
+    port =
+        int(
+            os.environ.get(
+                "PORT",
+                5000
+            )
+        )
+
+
+    app.run(
+
+        host="0.0.0.0",
+
+        port=port
+)
