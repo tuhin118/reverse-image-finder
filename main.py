@@ -1,7 +1,7 @@
 import io
 import os
+import base64
 import requests
-import imagehash
 
 from PIL import Image, UnidentifiedImageError
 from flask import Flask, request, render_template
@@ -13,24 +13,25 @@ app = Flask(__name__)
 # CONFIGURATION
 # =========================================================
 
-# Maximum browser upload size = 30 MB
+# Maximum browser upload size
 app.config["MAX_CONTENT_LENGTH"] = 30 * 1024 * 1024
 
-# Minimum visual similarity
-SIMILARITY_THRESHOLD = 70
+SERPAPI_URL = "https://serpapi.com/search.json"
 
-# External request timeout
 REQUEST_TIMEOUT = 60
 
-# User-Agent
-USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 Chrome/120 Safari/537.36"
+)
 
 
 # =========================================================
-# HELPER: RENDER ERROR
+# ERROR PAGE
 # =========================================================
 
 def render_error(message):
+
     return render_template(
         "index.html",
         error=message,
@@ -40,74 +41,172 @@ def render_error(message):
 
 
 # =========================================================
-# IMAGE SIMILARITY
+# COMPRESS IMAGE FOR SERPAPI
 # =========================================================
 
-def calculate_similarity(source_image, candidate_url):
-
-    if not candidate_url:
-        return 0
+def prepare_image(file_data):
 
     try:
 
+        image = Image.open(
+            io.BytesIO(file_data)
+        )
+
+        image.load()
+
+        # Convert unusual formats to RGB
+        if image.mode not in ("RGB", "L"):
+            image = image.convert("RGB")
+
+        # Resize large images
+        max_size = 1600
+
+        image.thumbnail(
+            (max_size, max_size),
+            Image.Resampling.LANCZOS
+        )
+
+        output = io.BytesIO()
+
+        # JPEG keeps memory and upload size low
+        if image.mode == "L":
+            image = image.convert("RGB")
+
+        image.save(
+            output,
+            format="JPEG",
+            quality=85,
+            optimize=True
+        )
+
+        return output.getvalue()
+
+    except (
+        UnidentifiedImageError,
+        OSError,
+        ValueError
+    ):
+
+        return None
+
+    except Exception:
+
+        return None
+
+
+# =========================================================
+# SERPAPI IMAGE SEARCH
+# =========================================================
+
+def search_with_serpapi(
+    image_data,
+    serpapi_key
+):
+
+    try:
+
+        # Convert image to base64
+        encoded_image = base64.b64encode(
+            image_data
+        ).decode("utf-8")
+
+        # SerpApi Google Lens can receive an image URL.
+        # We use a data URL here.
+        data_url = (
+            "data:image/jpeg;base64,"
+            + encoded_image
+        )
+
+        params = {
+
+            "engine": "google_lens",
+
+            "url": data_url,
+
+            "api_key": serpapi_key,
+
+            "hl": "en",
+
+            "country": "us"
+
+        }
+
         response = requests.get(
-            candidate_url,
-            timeout=15,
+
+            SERPAPI_URL,
+
+            params=params,
+
             headers={
                 "User-Agent": USER_AGENT
-            }
+            },
+
+            timeout=REQUEST_TIMEOUT
+
         )
 
         response.raise_for_status()
 
-        candidate_image = Image.open(
-            io.BytesIO(response.content)
-        ).convert("RGB")
+        try:
 
-        source_hash = imagehash.phash(
-            source_image
-        )
+            data = response.json()
 
-        candidate_hash = imagehash.phash(
-            candidate_image
-        )
+        except ValueError:
 
-        distance = (
-            source_hash -
-            candidate_hash
-        )
+            return None, "SerpApi returned an invalid response."
 
-        similarity = (
-            1 -
-            distance / 64
-        ) * 100
+        if data.get("error"):
 
-        return round(
-            max(
-                0,
-                min(
-                    100,
-                    similarity
+            return None, str(
+                data.get(
+                    "error"
                 )
-            ),
-            2
+            )
+
+        return data, None
+
+    except requests.Timeout:
+
+        return None, (
+            "SerpApi request timed out. "
+            "Please try again."
         )
 
-    except Exception:
-        return 0
+    except requests.RequestException as e:
+
+        return None, (
+            "SerpApi request failed: "
+            + str(e)
+        )
+
+    except Exception as e:
+
+        return None, (
+            "Unexpected search error: "
+            + str(e)
+        )
 
 
 # =========================================================
 # HOME
 # =========================================================
 
-@app.route("/", methods=["GET"])
+@app.route(
+    "/",
+    methods=["GET"]
+)
 def home():
 
     return render_template(
+
         "index.html",
+
         searched=False,
-        results=[]
+
+        results=[],
+
+        error=None
+
     )
 
 
@@ -115,7 +214,10 @@ def home():
 # SEARCH
 # =========================================================
 
-@app.route("/search", methods=["POST"])
+@app.route(
+    "/search",
+    methods=["POST"]
+)
 def search():
 
     # -----------------------------------------------------
@@ -123,26 +225,26 @@ def search():
     # -----------------------------------------------------
 
     serpapi_key = (
-        request.form.get("serpapi_key")
-        or os.environ.get("SERPAPI_KEY")
+
+        request.form.get(
+            "serpapi_key"
+        )
+
+        or os.environ.get(
+            "SERPAPI_KEY"
+        )
+
     )
+
 
     if not serpapi_key:
 
         return render_error(
+
             "SERPAPI_KEY is not configured. "
-            "Please add your SerpApi key to the environment variables."
+            "Please add SERPAPI_KEY in Render Environment Variables."
+
         )
-
-
-    # -----------------------------------------------------
-    # GET IMAGE URL
-    # -----------------------------------------------------
-
-    image_url = request.form.get(
-        "image_url",
-        ""
-    ).strip()
 
 
     # -----------------------------------------------------
@@ -155,8 +257,21 @@ def search():
 
 
     # -----------------------------------------------------
-    # CHECK UPLOADED IMAGE
+    # GET IMAGE URL
     # -----------------------------------------------------
+
+    image_url = request.form.get(
+        "image_url",
+        ""
+    ).strip()
+
+
+    image_data = None
+
+
+    # =====================================================
+    # OPTION 1: UPLOADED IMAGE
+    # =====================================================
 
     if (
         uploaded_file
@@ -165,11 +280,9 @@ def search():
 
         try:
 
-            # Read file
-            file_data = uploaded_file.read()
+            original_data = uploaded_file.read()
 
-
-            if not file_data:
+            if not original_data:
 
                 return render_error(
                     "The selected image is empty."
@@ -177,140 +290,106 @@ def search():
 
 
             # -------------------------------------------------
-            # FILE SIZE CHECK
+            # SIZE CHECK
             # -------------------------------------------------
 
-            if len(file_data) > 30 * 1024 * 1024:
+            if (
+                len(original_data)
+                > 30 * 1024 * 1024
+            ):
 
                 return render_error(
                     "Image is too large. "
-                    "Maximum upload size is 30 MB."
+                    "Maximum size is 30 MB."
                 )
 
 
             # -------------------------------------------------
-            # CHECK THAT FILE IS ACTUALLY AN IMAGE
+            # PREPARE IMAGE
             # -------------------------------------------------
 
-            try:
+            image_data = prepare_image(
+                original_data
+            )
 
-                test_image = Image.open(
-                    io.BytesIO(file_data)
-                )
 
-                test_image.verify()
-
-            except (
-                UnidentifiedImageError,
-                OSError,
-                ValueError
-            ):
+            if not image_data:
 
                 return render_error(
                     "The selected file is not a valid image."
                 )
 
 
-            # -------------------------------------------------
-            # PICRD UPLOAD
-            # -------------------------------------------------
+        except Exception as e:
 
-            upload_response = requests.post(
+            return render_error(
+                "Could not process uploaded image: "
+                + str(e)
+            )
 
-                "https://picrd.com/api/upload",
 
-                files={
-                    "file": (
-                        uploaded_file.filename,
-                        file_data,
-                        uploaded_file.mimetype
-                    )
-                },
+    # =====================================================
+    # OPTION 2: IMAGE URL
+    # =====================================================
 
-                data={
-                    "visibility": "unlisted"
-                },
+    elif image_url:
+
+        try:
+
+            response = requests.get(
+
+                image_url,
 
                 headers={
                     "User-Agent": USER_AGENT
                 },
 
-                timeout=REQUEST_TIMEOUT
+                timeout=30
+
             )
 
+            response.raise_for_status()
 
-            # -------------------------------------------------
-            # PARSE PICRD RESPONSE
-            # -------------------------------------------------
+            if not response.content:
 
-            try:
-
-                upload_data = (
-                    upload_response.json()
+                return render_error(
+                    "The image URL returned an empty file."
                 )
 
-            except ValueError:
 
-                upload_data = {}
-
-
-            # -------------------------------------------------
-            # CHECK PICRD RESPONSE
-            # -------------------------------------------------
-
-            if upload_response.status_code not in (
-                200,
-                201
+            if (
+                len(response.content)
+                > 30 * 1024 * 1024
             ):
 
-                error_message = (
-                    upload_data.get("error")
-                    or upload_data.get("message")
-                    or (
-                        "Picrd returned HTTP "
-                        + str(
-                            upload_response.status_code
-                        )
-                    )
-                )
-
                 return render_error(
-                    "Image upload failed: "
-                    + error_message
+                    "The remote image is larger than 30 MB."
                 )
 
 
-            # -------------------------------------------------
-            # GET IMAGE URL
-            # -------------------------------------------------
-
-            image_url = (
-                upload_data.get("image_url")
-                or upload_data.get("url")
+            image_data = prepare_image(
+                response.content
             )
 
 
-            if not image_url:
+            if not image_data:
 
                 return render_error(
-                    "Image upload failed. "
-                    "The image hosting service did not return "
-                    "a public image URL."
+                    "The provided URL does not contain a valid image."
                 )
 
 
         except requests.Timeout:
 
             return render_error(
-                "Image upload timed out. "
-                "Please try again."
+                "Downloading the image timed out."
             )
 
 
         except requests.RequestException as e:
 
             return render_error(
-                "Image upload failed: "
+                "Could not download image: "
                 + str(e)
             )
 
@@ -318,200 +397,58 @@ def search():
         except Exception as e:
 
             return render_error(
-                "Unexpected upload error: "
+                "Could not process image: "
                 + str(e)
             )
 
 
     # =====================================================
-    # IMAGE URL CHECK
+    # NOTHING PROVIDED
     # =====================================================
 
-    if not image_url:
+    else:
 
         return render_error(
+
             "Please upload an image "
             "or provide an image URL."
+
         )
 
 
     # =====================================================
-    # GOOGLE LENS / SERPAPI
+    # GOOGLE LENS SEARCH
     # =====================================================
 
-    params = {
+    data, error = search_with_serpapi(
 
-        "engine": "google_lens",
+        image_data,
 
-        "url": image_url,
+        serpapi_key
 
-        "api_key": serpapi_key
-
-    }
+    )
 
 
-    try:
+    # Release image memory
+    image_data = None
 
-        response = requests.get(
 
-            "https://serpapi.com/search.json",
+    if error:
 
-            params=params,
-
-            headers={
-                "User-Agent": USER_AGENT
-            },
-
-            timeout=REQUEST_TIMEOUT
+        return render_error(
+            error
         )
 
 
-        # -------------------------------------------------
-        # HTTP STATUS
-        # -------------------------------------------------
-
-        response.raise_for_status()
-
-
-        # -------------------------------------------------
-        # JSON
-        # -------------------------------------------------
-
-        try:
-
-            data = response.json()
-
-        except ValueError:
-
-            return render_error(
-                "SerpApi returned an invalid response."
-            )
-
-
-        # -------------------------------------------------
-        # SERPAPI ERROR
-        # -------------------------------------------------
-
-        if data.get("error"):
-
-            return render_error(
-                "SerpApi search failed: "
-                + str(
-                    data.get(
-                        "error"
-                    )
-                )
-            )
-
-
-    except requests.Timeout:
+    if not data:
 
         return render_error(
-            "Search request timed out. "
-            "Please try again."
-        )
-
-
-    except requests.RequestException as e:
-
-        return render_error(
-            "Search request failed: "
-            + str(e)
-        )
-
-
-    except Exception as e:
-
-        return render_error(
-            "Unexpected search error: "
-            + str(e)
+            "No search data was returned."
         )
 
 
     # =====================================================
-    # DOWNLOAD SOURCE IMAGE
-    # =====================================================
-
-    try:
-
-        source_response = requests.get(
-
-            image_url,
-
-            timeout=30,
-
-            headers={
-                "User-Agent": USER_AGENT
-            }
-        )
-
-
-        source_response.raise_for_status()
-
-
-        # -------------------------------------------------
-        # CHECK CONTENT
-        # -------------------------------------------------
-
-        if not source_response.content:
-
-            return render_error(
-                "The image URL returned an empty file."
-            )
-
-
-        # -------------------------------------------------
-        # OPEN IMAGE
-        # -------------------------------------------------
-
-        source_image = Image.open(
-
-            io.BytesIO(
-                source_response.content
-            )
-
-        ).convert("RGB")
-
-
-    except requests.Timeout:
-
-        return render_error(
-            "Could not download the uploaded image "
-            "from the image host."
-        )
-
-
-    except requests.RequestException as e:
-
-        return render_error(
-            "Could not download source image: "
-            + str(e)
-        )
-
-
-    except (
-        UnidentifiedImageError,
-        OSError,
-        ValueError
-    ) as e:
-
-        return render_error(
-            "The image URL does not contain "
-            "a valid image: "
-            + str(e)
-        )
-
-
-    except Exception as e:
-
-        return render_error(
-            "Could not process image: "
-            + str(e)
-        )
-
-
-    # =====================================================
-    # PROCESS VISUAL MATCHES
+    # PROCESS RESULTS
     # =====================================================
 
     results = []
@@ -531,18 +468,19 @@ def search():
         visual_matches = []
 
 
+    # Limit results to keep Render memory low
+    visual_matches = visual_matches[:20]
+
+
     for item in visual_matches:
 
         if not isinstance(
             item,
             dict
         ):
+
             continue
 
-
-        # -------------------------------------------------
-        # RESULT LINK
-        # -------------------------------------------------
 
         link = item.get(
             "link",
@@ -551,12 +489,9 @@ def search():
 
 
         if not link:
+
             continue
 
-
-        # -------------------------------------------------
-        # TITLE
-        # -------------------------------------------------
 
         title = item.get(
             "title",
@@ -564,47 +499,77 @@ def search():
         )
 
 
-        if not title:
-
-            title = "Untitled"
-
-
-        # -------------------------------------------------
-        # THUMBNAIL
-        # -------------------------------------------------
-
         thumbnail = item.get(
             "thumbnail",
             ""
         )
 
 
-        # -------------------------------------------------
-        # SIMILARITY
-        # -------------------------------------------------
-
-        similarity = 0
+        # SerpApi already provides
+        # visual search results.
+        # No extra imagehash processing.
 
 
-        if thumbnail:
+        results.append({
 
-            similarity = calculate_similarity(
+            "title": title,
 
-                source_image,
+            "link": link,
 
-                thumbnail
+            "thumbnail": thumbnail,
 
+            "similarity": "—"
+
+        })
+
+
+    # =====================================================
+    # EXACT MATCHES
+    # =====================================================
+
+    exact_matches = data.get(
+        "exact_matches",
+        []
+    )
+
+
+    if isinstance(
+        exact_matches,
+        list
+    ):
+
+        for item in exact_matches[:10]:
+
+            if not isinstance(
+                item,
+                dict
+            ):
+
+                continue
+
+
+            link = item.get(
+                "link",
+                ""
             )
 
 
-        # -------------------------------------------------
-        # ADD RESULT
-        # -------------------------------------------------
+            if not link:
 
-        if (
-            similarity >=
-            SIMILARITY_THRESHOLD
-        ):
+                continue
+
+
+            title = item.get(
+                "title",
+                "Exact Match"
+            )
+
+
+            thumbnail = item.get(
+                "thumbnail",
+                ""
+            )
+
 
             results.append({
 
@@ -614,30 +579,47 @@ def search():
 
                 "thumbnail": thumbnail,
 
-                "similarity": similarity
+                "similarity": "Exact"
 
             })
 
 
     # =====================================================
-    # SORT RESULTS
+    # REMOVE DUPLICATE LINKS
     # =====================================================
 
-    results.sort(
+    unique_results = []
 
-        key=lambda x:
-        x.get(
-            "similarity",
-            0
-        ),
+    seen_links = set()
 
-        reverse=True
 
-    )
+    for result in results:
+
+        link = result.get(
+            "link"
+        )
+
+
+        if link in seen_links:
+
+            continue
+
+
+        seen_links.add(
+            link
+        )
+
+
+        unique_results.append(
+            result
+        )
+
+
+    results = unique_results[:30]
 
 
     # =====================================================
-    # SHOW RESULTS
+    # RETURN RESULTS
     # =====================================================
 
     return render_template(
@@ -661,21 +643,25 @@ def search():
 def request_entity_too_large(error):
 
     return render_error(
+
         "Image is too large. "
         "Maximum upload size is 30 MB."
+
     ), 413
 
 
 # =========================================================
-# GENERAL SERVER ERROR
+# GENERAL ERROR
 # =========================================================
 
 @app.errorhandler(500)
 def internal_server_error(error):
 
     return render_error(
-        "Server error occurred while processing "
-        "the image. Please try again."
+
+        "Server error occurred. "
+        "Please try again."
+
     ), 500
 
 
@@ -686,10 +672,12 @@ def internal_server_error(error):
 if __name__ == "__main__":
 
     port = int(
+
         os.environ.get(
             "PORT",
             10000
         )
+
     )
 
 
