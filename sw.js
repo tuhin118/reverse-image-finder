@@ -1,8 +1,10 @@
-const CACHE_NAME = "reverse-image-finder-v1";
+const CACHE_NAME = "tuhin-image-finder-v3";
 
 const FILES_TO_CACHE = [
     "/",
-    "/manifest.json"
+    "/static/manifest.json",
+    "/static/icon-192.png",
+    "/static/icon-512.png"
 ];
 
 self.addEventListener("install", event => {
