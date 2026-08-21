@@ -1,27 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
 <meta charset="UTF-8">
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <meta name="theme-color" content="#02050a">
-
 <meta name="description" content="Tuhin Image Lab - Premium Reverse Image Finder">
 
 <link rel="manifest" href="/static/manifest.json">
 
-<meta name="mobile-web-app-capable" content="yes">
-
-<meta name="apple-mobile-web-app-capable" content="yes">
-
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
 <title>Tuhin Image Lab</title>
 
 <style>
-
 *{
     box-sizing:border-box;
     margin:0;
@@ -32,7 +22,6 @@
     --bg:#02050a;
     --panel:rgba(7,16,28,.84);
     --line:rgba(0,174,255,.25);
-    --blue:#00aaff;
     --cyan:#00e5ff;
     --text:#eef8ff;
     --muted:#7890a5;
@@ -222,13 +211,12 @@ body{
     top:0;
     width:100%;
     height:1px;
-    background:
-        linear-gradient(
-            90deg,
-            transparent,
-            #00baff,
-            transparent
-        );
+    background:linear-gradient(
+        90deg,
+        transparent,
+        #00baff,
+        transparent
+    );
     animation:topLine 3s linear infinite;
 }
 
@@ -283,7 +271,6 @@ body{
     border-radius:22px;
     background:rgba(0,140,255,.08);
     font-size:32px;
-    box-shadow:0 0 30px rgba(0,160,255,.08);
 }
 
 .upload-title{
@@ -328,7 +315,6 @@ body{
     color:white;
     outline:none;
     font-size:14px;
-    transition:.25s;
 }
 
 .url-input:focus{
@@ -365,17 +351,10 @@ body{
 .search-btn:hover{
     background-position:100% 0;
     transform:translateY(-2px);
-    box-shadow:0 15px 35px rgba(0,150,255,.25);
 }
 
 .search-btn:active{
     transform:scale(.98);
-}
-
-.search-btn:disabled{
-    opacity:.6;
-    cursor:not-allowed;
-    transform:none;
 }
 
 .scanner{
@@ -391,7 +370,6 @@ body{
     border:1px solid #087fba;
     border-radius:20px;
     background:#01060c;
-    box-shadow:0 0 40px rgba(0,160,255,.12);
 }
 
 .scan-frame img{
@@ -430,17 +408,9 @@ body{
 }
 
 @keyframes scan{
-    0%{
-        top:0;
-    }
-
-    50%{
-        top:calc(100% - 3px);
-    }
-
-    100%{
-        top:0;
-    }
+    0%{top:0;}
+    50%{top:calc(100% - 3px);}
+    100%{top:0;}
 }
 
 .scanning-text{
@@ -490,13 +460,6 @@ body{
     background:rgba(5,15,27,.8);
     text-decoration:none;
     color:white;
-    transition:.25s;
-}
-
-.result:hover{
-    border-color:#00aaff;
-    transform:translateY(-2px);
-    box-shadow:0 10px 30px rgba(0,130,255,.1);
 }
 
 .result-top{
@@ -573,14 +536,12 @@ body{
     text-decoration:none;
     font-size:12px;
     font-weight:bold;
-    transition:.25s;
 }
 
 .tiktok-btn:hover{
     border-color:#00e5ff;
     background:rgba(0,180,255,.08);
     transform:translateY(-2px);
-    box-shadow:0 8px 25px rgba(0,180,255,.12);
 }
 
 .tiktok-icon{
@@ -660,11 +621,8 @@ body{
     .scan-frame{
         height:280px;
     }
-
 }
-
 </style>
-
 </head>
 
 <body>
@@ -672,12 +630,9 @@ body{
 <canvas id="matrix"></canvas>
 
 <div class="bg-glow"></div>
-
 <div class="scanlines"></div>
 
-
 <main class="app">
-
 
 <header class="header">
 
@@ -701,17 +656,12 @@ body{
 
     </div>
 
-
     <div class="status">
-
         <span class="status-dot"></span>
-
         SYSTEM ONLINE
-
     </div>
 
 </header>
-
 
 <section class="hero">
 
@@ -719,12 +669,10 @@ body{
         ⚡ PREMIUM IMAGE SEARCH
     </div>
 
-
     <h1>
         REVERSE<br>
         <span>IMAGE FINDER</span>
     </h1>
-
 
     <p>
         Find pages and websites where an image appears
@@ -733,9 +681,7 @@ body{
 
 </section>
 
-
 <section class="panel">
-
 
 <form
     method="POST"
@@ -744,16 +690,15 @@ body{
     onsubmit="return startScan()"
 >
 
-
 <label class="upload">
 
     <input
+        id="imageInput"
         type="file"
         name="image"
         accept="image/*"
         onchange="previewImage(event)"
     >
-
 
     <div>
 
@@ -761,16 +706,13 @@ body{
             📷
         </div>
 
-
         <div class="upload-title">
             Upload Image
         </div>
 
-
         <div class="upload-sub">
             Tap to select an image from your device
         </div>
-
 
         <div
             class="file-info"
@@ -781,37 +723,32 @@ body{
 
 </label>
 
-
 <img
     id="preview"
     alt="Selected image"
 >
 
-
 <div class="url-area">
 
     <input
         class="url-input"
+        id="imageUrl"
         type="url"
         name="image_url"
         placeholder="Or paste an image URL..."
-        autocomplete="off"
     >
 
 </div>
 
-
 <button
     class="search-btn"
-    type="submit"
     id="searchButton"
+    type="submit"
 >
     ⚡ START IMAGE SEARCH
 </button>
 
-
 </form>
-
 
 <div
     class="scanner"
@@ -825,40 +762,31 @@ body{
             alt="Scanning image"
         >
 
-
         <div class="scan-grid"></div>
 
         <div class="scan-line"></div>
 
     </div>
 
-
     <div class="scanning-text">
-
         ANALYZING IMAGE<span id="dots"></span>
-
     </div>
 
 </div>
 
-
 </section>
-
 
 {% if error %}
 
 <div class="error">
-
     ⚠️ {{ error }}
-
 </div>
 
 {% endif %}
 
-
 {% if results %}
 
-<section class="results">
+<section class="results" id="results">
 
     <div class="section-title">
 
@@ -866,13 +794,11 @@ body{
             🔎 Visual Matches
         </h2>
 
-
         <div class="count">
             {{ results|length }} RESULTS
         </div>
 
     </div>
-
 
     {% for result in results %}
 
@@ -883,9 +809,7 @@ body{
         rel="noopener noreferrer"
     >
 
-
         <div class="result-top">
-
 
             {% if result.thumbnail %}
 
@@ -902,13 +826,11 @@ body{
 
             {% endif %}
 
-
             <div>
 
                 <div class="result-number">
                     MATCH #{{ loop.index }}
                 </div>
-
 
                 <div class="result-title">
                     {{ result.title }}
@@ -918,19 +840,14 @@ body{
 
         </div>
 
-
         <div class="similarity">
-
             Visual score:
             {{ result.similarity }}%
-
         </div>
-
 
         <div class="result-link">
             {{ result.link }}
         </div>
-
 
     </a>
 
@@ -938,17 +855,13 @@ body{
 
 </section>
 
-
 {% elif searched and not error %}
 
 <div class="no-results">
-
     🔍 No visual matches were found.
-
 </div>
 
 {% endif %}
-
 
 <div class="social-area">
 
@@ -959,95 +872,59 @@ body{
         rel="noopener noreferrer"
         aria-label="Visit Tuhin Image Lab TikTok"
     >
-
-        <span class="tiktok-icon">
-            ♪
-        </span>
-
-        <span>
-            Follow @error_game_ar
-        </span>
-
+        <span class="tiktok-icon">♪</span>
+        <span>Follow @error_game_ar</span>
     </a>
 
 </div>
 
-
 <div class="creator">
-
     BUILT BY TUHIN • TUHIN IMAGE LAB
-
 </div>
-
 
 </main>
 
-
 <nav class="bottom-nav">
-
 
     <div
         class="nav-item active"
         onclick="scrollToTop()"
     >
-
-        <span class="nav-icon">
-            ⌂
-        </span>
-
+        <span class="nav-icon">⌂</span>
         SCAN
-
     </div>
-
 
     <div
         class="nav-item"
         onclick="scrollToResults()"
     >
-
-        <span class="nav-icon">
-            ◈
-        </span>
-
+        <span class="nav-icon">◈</span>
         RESULTS
-
     </div>
-
 
     <div
         class="nav-item"
         onclick="showSystemInfo()"
     >
-
-        <span class="nav-icon">
-            ⚙
-        </span>
-
+        <span class="nav-icon">⚙</span>
         SYSTEM
-
     </div>
-
 
 </nav>
 
-
 <script>
 
-
-/* =====================================================
+/* =========================
    IMAGE PREVIEW
-===================================================== */
+========================= */
 
 function previewImage(event){
 
-    const file =
-        event.target.files &&
-        event.target.files[0];
+    const file = event.target.files[0];
 
     if(!file){
         return;
     }
-
 
     const preview =
         document.getElementById("preview");
@@ -1055,60 +932,58 @@ function previewImage(event){
     const fileInfo =
         document.getElementById("fileInfo");
 
-
-    if(!preview || !fileInfo){
-        return;
-    }
-
-
     if(!file.type.startsWith("image/")){
 
-        alert("Please select a valid image file.");
+        alert("Please select an image file.");
 
         event.target.value = "";
 
         return;
     }
 
+    if(file.size > 20 * 1024 * 1024){
 
-    preview.src =
+        alert("Image size must be 20MB or smaller.");
+
+        event.target.value = "";
+
+        return;
+    }
+
+    const imageURL =
         URL.createObjectURL(file);
 
-    preview.style.display =
-        "block";
+    preview.src = imageURL;
 
+    preview.style.display = "block";
 
     fileInfo.textContent =
         file.name +
         " • " +
         formatBytes(file.size);
 
-    fileInfo.style.display =
-        "block";
+    fileInfo.style.display = "block";
 }
 
 
-/* =====================================================
+/* =========================
    FILE SIZE
-===================================================== */
+========================= */
 
 function formatBytes(bytes){
 
-    if(!bytes || bytes === 0){
+    if(bytes === 0){
         return "0 Bytes";
     }
 
-
     const sizes =
         ["Bytes","KB","MB","GB"];
-
 
     const i =
         Math.floor(
             Math.log(bytes) /
             Math.log(1024)
         );
-
 
     return (
         Math.round(
@@ -1123,59 +998,49 @@ function formatBytes(bytes){
 }
 
 
-/* =====================================================
+/* =========================
    START SCAN
-===================================================== */
+========================= */
 
 function startScan(){
 
     const fileInput =
-        document.querySelector(
-            'input[name="image"]'
-        );
-
+        document.getElementById("imageInput");
 
     const urlInput =
-        document.querySelector(
-            'input[name="image_url"]'
-        );
-
+        document.getElementById("imageUrl");
 
     const scanner =
-        document.getElementById(
-            "scanner"
-        );
-
+        document.getElementById("scanner");
 
     const scanImage =
-        document.getElementById(
-            "scanImage"
-        );
-
+        document.getElementById("scanImage");
 
     const searchButton =
-        document.getElementById(
-            "searchButton"
-        );
+        document.getElementById("searchButton");
 
-
-    const hasFile =
+    if(
         fileInput &&
         fileInput.files &&
-        fileInput.files.length > 0;
+        fileInput.files.length > 0
+    ){
 
+        scanImage.src =
+            URL.createObjectURL(
+                fileInput.files[0]
+            );
 
-    const imageUrl =
-        urlInput
-        ? urlInput.value.trim()
-        : "";
+    }
+    else if(
+        urlInput &&
+        urlInput.value.trim() !== ""
+    ){
 
+        scanImage.src =
+            urlInput.value.trim();
 
-    const hasUrl =
-        imageUrl.length > 0;
-
-
-    if(!hasFile && !hasUrl){
+    }
+    else{
 
         alert(
             "Please upload an image or provide an image URL."
@@ -1184,77 +1049,47 @@ function startScan(){
         return false;
     }
 
-
-    if(hasFile){
-
-        scanImage.src =
-            URL.createObjectURL(
-                fileInput.files[0]
-            );
-
-    }
-    else{
-
-        scanImage.src =
-            imageUrl;
-
-    }
-
-
-    if(scanner){
-
-        scanner.style.display =
-            "block";
-
-
-        setTimeout(function(){
-
-            scanner.scrollIntoView({
-                behavior:"smooth",
-                block:"center"
-            });
-
-        },50);
-
-    }
-
+    scanner.style.display = "block";
 
     if(searchButton){
 
-        searchButton.disabled =
-            true;
+        searchButton.disabled = true;
 
         searchButton.textContent =
-            "🔄 SEARCHING...";
+            "⚡ SEARCHING...";
 
     }
 
+    setTimeout(function(){
+
+        scanner.scrollIntoView({
+            behavior:"smooth",
+            block:"center"
+        });
+
+    },50);
 
     return true;
 }
 
 
-/* =====================================================
+/* =========================
    SCANNING DOTS
-===================================================== */
+========================= */
 
 let dotCount = 0;
-
 
 setInterval(function(){
 
     const dots =
         document.getElementById("dots");
 
-
     if(!dots){
         return;
     }
 
-
     dotCount =
         (dotCount + 1) % 4;
-
 
     dots.textContent =
         ".".repeat(dotCount);
@@ -1262,9 +1097,9 @@ setInterval(function(){
 },500);
 
 
-/* =====================================================
-   BOTTOM NAVIGATION
-===================================================== */
+/* =========================
+   BOTTOM NAV
+========================= */
 
 function scrollToTop(){
 
@@ -1278,8 +1113,7 @@ function scrollToTop(){
 function scrollToResults(){
 
     const results =
-        document.querySelector(".results");
-
+        document.getElementById("results");
 
     if(results){
 
@@ -1310,28 +1144,20 @@ function showSystemInfo(){
 }
 
 
-/* =====================================================
+/* =========================
    MATRIX BACKGROUND
-===================================================== */
+========================= */
 
 const canvas =
     document.getElementById("matrix");
 
-
 const ctx =
-    canvas
-    ? canvas.getContext("2d")
-    : null;
-
+    canvas.getContext("2d");
 
 let width = 0;
-
 let height = 0;
-
 let columns = 0;
-
 let drops = [];
-
 
 const chars =
     "01ABCDEFGHIJKLMNOPQRSTUVWXYZ<>[]{}#$%";
@@ -1339,29 +1165,20 @@ const chars =
 
 function resizeMatrix(){
 
-    if(!canvas || !ctx){
-        return;
-    }
-
-
     width =
         canvas.width =
         window.innerWidth;
-
 
     height =
         canvas.height =
         window.innerHeight;
 
-
     const fontSize = 14;
-
 
     columns =
         Math.floor(
             width / fontSize
         );
-
 
     drops =
         Array(columns).fill(1);
@@ -1370,14 +1187,8 @@ function resizeMatrix(){
 
 function drawMatrix(){
 
-    if(!canvas || !ctx){
-        return;
-    }
-
-
     ctx.fillStyle =
         "rgba(2,5,10,.09)";
-
 
     ctx.fillRect(
         0,
@@ -1386,14 +1197,11 @@ function drawMatrix(){
         height
     );
 
-
     const fontSize = 14;
-
 
     ctx.font =
         fontSize +
         "px monospace";
-
 
     for(
         let i = 0;
@@ -1409,19 +1217,16 @@ function drawMatrix(){
                 )
             );
 
-
         ctx.fillStyle =
             Math.random() > .9
             ? "#00d9ff"
             : "#0876aa";
-
 
         ctx.fillText(
             char,
             i * fontSize,
             drops[i] * fontSize
         );
-
 
         if(
             drops[i] * fontSize > height &&
@@ -1432,7 +1237,6 @@ function drawMatrix(){
 
         }
 
-
         drops[i]++;
     }
 }
@@ -1440,12 +1244,10 @@ function drawMatrix(){
 
 resizeMatrix();
 
-
 window.addEventListener(
     "resize",
     resizeMatrix
 );
-
 
 setInterval(
     drawMatrix,
@@ -1453,9 +1255,9 @@ setInterval(
 );
 
 
-/* =====================================================
+/* =========================
    SERVICE WORKER
-===================================================== */
+========================= */
 
 if(
     "serviceWorker" in navigator
@@ -1465,31 +1267,28 @@ if(
         "load",
         function(){
 
-            navigator.serviceWorker.register(
-                "/sw.js"
-            )
-            .then(function(registration){
+            navigator.serviceWorker
+                .register("/static/sw.js")
+                .then(function(){
 
-                console.log(
-                    "Service Worker registered:",
-                    registration.scope
-                );
+                    console.log(
+                        "Tuhin Image Lab Service Worker registered."
+                    );
 
-            })
-            .catch(function(error){
+                })
+                .catch(function(error){
 
-                console.error(
-                    "Service Worker registration failed:",
-                    error
-                );
+                    console.log(
+                        "Service Worker registration failed:",
+                        error
+                    );
 
-            });
+                });
 
         }
     );
 
 }
-
 
 </script>
 
