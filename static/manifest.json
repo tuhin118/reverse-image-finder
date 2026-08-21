@@ -1,13 +1,13 @@
 {
-  "name": "Tuhin Image Finder",
-  "short_name": "Image Finder",
-  "description": "Tuhin Image Finder - Reverse Image Search",
+  "name": "Tuhin Image Lab",
+  "short_name": "Image Lab",
+  "description": "Premium Reverse Image Finder",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#02050a",
   "theme_color": "#02050a",
-  "orientation": "portrait",
   "icons": [
     {
       "src": "/static/icon-192.png",
