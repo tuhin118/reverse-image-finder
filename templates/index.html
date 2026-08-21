@@ -1,17 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
 <meta charset="UTF-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <meta name="theme-color" content="#02050a">
+
 <meta name="description" content="Tuhin Image Lab - Premium Reverse Image Finder">
 
 <link rel="manifest" href="/static/manifest.json">
 
+<meta name="mobile-web-app-capable" content="yes">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
 <title>Tuhin Image Lab</title>
 
 <style>
+
 *{
     box-sizing:border-box;
     margin:0;
@@ -54,8 +64,15 @@ body{
     z-index:-4;
     pointer-events:none;
     background:
-        radial-gradient(circle at 50% 20%,rgba(0,150,255,.13),transparent 45%),
-        linear-gradient(rgba(0,0,0,.25),rgba(0,0,0,.78));
+        radial-gradient(
+            circle at 50% 20%,
+            rgba(0,150,255,.13),
+            transparent 45%
+        ),
+        linear-gradient(
+            rgba(0,0,0,.25),
+            rgba(0,0,0,.78)
+        );
 }
 
 .scanlines{
@@ -205,12 +222,13 @@ body{
     top:0;
     width:100%;
     height:1px;
-    background:linear-gradient(
-        90deg,
-        transparent,
-        #00baff,
-        transparent
-    );
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            #00baff,
+            transparent
+        );
     animation:topLine 3s linear infinite;
 }
 
@@ -354,6 +372,12 @@ body{
     transform:scale(.98);
 }
 
+.search-btn:disabled{
+    opacity:.6;
+    cursor:not-allowed;
+    transform:none;
+}
+
 .scanner{
     display:none;
     margin-top:20px;
@@ -406,9 +430,17 @@ body{
 }
 
 @keyframes scan{
-    0%{top:0;}
-    50%{top:calc(100% - 3px);}
-    100%{top:0;}
+    0%{
+        top:0;
+    }
+
+    50%{
+        top:calc(100% - 3px);
+    }
+
+    100%{
+        top:0;
+    }
 }
 
 .scanning-text{
@@ -523,8 +555,6 @@ body{
     background:rgba(5,15,27,.7);
 }
 
-/* TIKTOK */
-
 .social-area{
     margin-top:25px;
     display:flex;
@@ -630,8 +660,11 @@ body{
     .scan-frame{
         height:280px;
     }
+
 }
+
 </style>
+
 </head>
 
 <body>
@@ -639,9 +672,12 @@ body{
 <canvas id="matrix"></canvas>
 
 <div class="bg-glow"></div>
+
 <div class="scanlines"></div>
 
+
 <main class="app">
+
 
 <header class="header">
 
@@ -665,9 +701,13 @@ body{
 
     </div>
 
+
     <div class="status">
+
         <span class="status-dot"></span>
+
         SYSTEM ONLINE
+
     </div>
 
 </header>
@@ -679,10 +719,12 @@ body{
         ⚡ PREMIUM IMAGE SEARCH
     </div>
 
+
     <h1>
         REVERSE<br>
         <span>IMAGE FINDER</span>
     </h1>
+
 
     <p>
         Find pages and websites where an image appears
@@ -694,12 +736,14 @@ body{
 
 <section class="panel">
 
+
 <form
     method="POST"
     action="/search"
     enctype="multipart/form-data"
     onsubmit="return startScan()"
 >
+
 
 <label class="upload">
 
@@ -710,19 +754,23 @@ body{
         onchange="previewImage(event)"
     >
 
+
     <div>
 
         <div class="upload-icon">
             📷
         </div>
 
+
         <div class="upload-title">
             Upload Image
         </div>
 
+
         <div class="upload-sub">
             Tap to select an image from your device
         </div>
+
 
         <div
             class="file-info"
@@ -747,6 +795,7 @@ body{
         type="url"
         name="image_url"
         placeholder="Or paste an image URL..."
+        autocomplete="off"
     >
 
 </div>
@@ -755,9 +804,11 @@ body{
 <button
     class="search-btn"
     type="submit"
+    id="searchButton"
 >
     ⚡ START IMAGE SEARCH
 </button>
+
 
 </form>
 
@@ -774,17 +825,22 @@ body{
             alt="Scanning image"
         >
 
+
         <div class="scan-grid"></div>
 
         <div class="scan-line"></div>
 
     </div>
 
+
     <div class="scanning-text">
+
         ANALYZING IMAGE<span id="dots"></span>
+
     </div>
 
 </div>
+
 
 </section>
 
@@ -792,7 +848,9 @@ body{
 {% if error %}
 
 <div class="error">
+
     ⚠️ {{ error }}
+
 </div>
 
 {% endif %}
@@ -807,6 +865,7 @@ body{
         <h2>
             🔎 Visual Matches
         </h2>
+
 
         <div class="count">
             {{ results|length }} RESULTS
@@ -824,7 +883,9 @@ body{
         rel="noopener noreferrer"
     >
 
+
         <div class="result-top">
+
 
             {% if result.thumbnail %}
 
@@ -848,6 +909,7 @@ body{
                     MATCH #{{ loop.index }}
                 </div>
 
+
                 <div class="result-title">
                     {{ result.title }}
                 </div>
@@ -858,14 +920,17 @@ body{
 
 
         <div class="similarity">
+
             Visual score:
             {{ result.similarity }}%
+
         </div>
 
 
         <div class="result-link">
             {{ result.link }}
         </div>
+
 
     </a>
 
@@ -885,8 +950,6 @@ body{
 {% endif %}
 
 
-<!-- TIKTOK -->
-
 <div class="social-area">
 
     <a
@@ -896,61 +959,95 @@ body{
         rel="noopener noreferrer"
         aria-label="Visit Tuhin Image Lab TikTok"
     >
-        <span class="tiktok-icon">♪</span>
-        <span>Follow @error_game_ar</span>
+
+        <span class="tiktok-icon">
+            ♪
+        </span>
+
+        <span>
+            Follow @error_game_ar
+        </span>
+
     </a>
 
 </div>
 
 
 <div class="creator">
+
     BUILT BY TUHIN • TUHIN IMAGE LAB
+
 </div>
+
 
 </main>
 
 
 <nav class="bottom-nav">
 
+
     <div
         class="nav-item active"
         onclick="scrollToTop()"
     >
-        <span class="nav-icon">⌂</span>
+
+        <span class="nav-icon">
+            ⌂
+        </span>
+
         SCAN
+
     </div>
+
 
     <div
         class="nav-item"
         onclick="scrollToResults()"
     >
-        <span class="nav-icon">◈</span>
+
+        <span class="nav-icon">
+            ◈
+        </span>
+
         RESULTS
+
     </div>
+
 
     <div
         class="nav-item"
         onclick="showSystemInfo()"
     >
-        <span class="nav-icon">⚙</span>
+
+        <span class="nav-icon">
+            ⚙
+        </span>
+
         SYSTEM
+
     </div>
+
 
 </nav>
 
 
 <script>
 
-/* IMAGE PREVIEW */
+
+/* =====================================================
+   IMAGE PREVIEW
+===================================================== */
 
 function previewImage(event){
 
     const file =
+        event.target.files &&
         event.target.files[0];
 
     if(!file){
         return;
     }
+
 
     const preview =
         document.getElementById("preview");
@@ -958,11 +1055,28 @@ function previewImage(event){
     const fileInfo =
         document.getElementById("fileInfo");
 
+
+    if(!preview || !fileInfo){
+        return;
+    }
+
+
+    if(!file.type.startsWith("image/")){
+
+        alert("Please select a valid image file.");
+
+        event.target.value = "";
+
+        return;
+    }
+
+
     preview.src =
         URL.createObjectURL(file);
 
     preview.style.display =
         "block";
+
 
     fileInfo.textContent =
         file.name +
@@ -974,20 +1088,27 @@ function previewImage(event){
 }
 
 
+/* =====================================================
+   FILE SIZE
+===================================================== */
+
 function formatBytes(bytes){
 
-    if(bytes === 0){
+    if(!bytes || bytes === 0){
         return "0 Bytes";
     }
 
+
     const sizes =
         ["Bytes","KB","MB","GB"];
+
 
     const i =
         Math.floor(
             Math.log(bytes) /
             Math.log(1024)
         );
+
 
     return (
         Math.round(
@@ -1002,7 +1123,9 @@ function formatBytes(bytes){
 }
 
 
-/* SCANNER */
+/* =====================================================
+   START SCAN
+===================================================== */
 
 function startScan(){
 
@@ -1011,15 +1134,18 @@ function startScan(){
             'input[name="image"]'
         );
 
+
     const urlInput =
         document.querySelector(
             'input[name="image_url"]'
         );
 
+
     const scanner =
         document.getElementById(
             "scanner"
         );
+
 
     const scanImage =
         document.getElementById(
@@ -1027,27 +1153,29 @@ function startScan(){
         );
 
 
-    if(
+    const searchButton =
+        document.getElementById(
+            "searchButton"
+        );
+
+
+    const hasFile =
         fileInput &&
-        fileInput.files.length > 0
-    ){
+        fileInput.files &&
+        fileInput.files.length > 0;
 
-        scanImage.src =
-            URL.createObjectURL(
-                fileInput.files[0]
-            );
 
-    }
-    else if(
-        urlInput &&
-        urlInput.value.trim()
-    ){
+    const imageUrl =
+        urlInput
+        ? urlInput.value.trim()
+        : "";
 
-        scanImage.src =
-            urlInput.value.trim();
 
-    }
-    else{
+    const hasUrl =
+        imageUrl.length > 0;
+
+
+    if(!hasFile && !hasUrl){
 
         alert(
             "Please upload an image or provide an image URL."
@@ -1057,39 +1185,76 @@ function startScan(){
     }
 
 
-    scanner.style.display =
-        "block";
+    if(hasFile){
+
+        scanImage.src =
+            URL.createObjectURL(
+                fileInput.files[0]
+            );
+
+    }
+    else{
+
+        scanImage.src =
+            imageUrl;
+
+    }
 
 
-    setTimeout(function(){
+    if(scanner){
 
-        scanner.scrollIntoView({
-            behavior:"smooth",
-            block:"center"
-        });
+        scanner.style.display =
+            "block";
 
-    },50);
+
+        setTimeout(function(){
+
+            scanner.scrollIntoView({
+                behavior:"smooth",
+                block:"center"
+            });
+
+        },50);
+
+    }
+
+
+    if(searchButton){
+
+        searchButton.disabled =
+            true;
+
+        searchButton.textContent =
+            "🔄 SEARCHING...";
+
+    }
 
 
     return true;
 }
 
 
-/* SCANNING DOTS */
+/* =====================================================
+   SCANNING DOTS
+===================================================== */
 
 let dotCount = 0;
+
 
 setInterval(function(){
 
     const dots =
         document.getElementById("dots");
 
+
     if(!dots){
         return;
     }
 
+
     dotCount =
         (dotCount + 1) % 4;
+
 
     dots.textContent =
         ".".repeat(dotCount);
@@ -1097,7 +1262,9 @@ setInterval(function(){
 },500);
 
 
-/* BOTTOM NAV */
+/* =====================================================
+   BOTTOM NAVIGATION
+===================================================== */
 
 function scrollToTop(){
 
@@ -1113,6 +1280,7 @@ function scrollToResults(){
     const results =
         document.querySelector(".results");
 
+
     if(results){
 
         results.scrollIntoView({
@@ -1120,7 +1288,8 @@ function scrollToResults(){
             block:"start"
         });
 
-    }else{
+    }
+    else{
 
         alert(
             "No search results available yet."
@@ -1141,18 +1310,28 @@ function showSystemInfo(){
 }
 
 
-/* MATRIX */
+/* =====================================================
+   MATRIX BACKGROUND
+===================================================== */
 
 const canvas =
     document.getElementById("matrix");
 
-const ctx =
-    canvas.getContext("2d");
 
-let width;
-let height;
-let columns;
-let drops;
+const ctx =
+    canvas
+    ? canvas.getContext("2d")
+    : null;
+
+
+let width = 0;
+
+let height = 0;
+
+let columns = 0;
+
+let drops = [];
+
 
 const chars =
     "01ABCDEFGHIJKLMNOPQRSTUVWXYZ<>[]{}#$%";
@@ -1160,20 +1339,29 @@ const chars =
 
 function resizeMatrix(){
 
+    if(!canvas || !ctx){
+        return;
+    }
+
+
     width =
         canvas.width =
         window.innerWidth;
+
 
     height =
         canvas.height =
         window.innerHeight;
 
+
     const fontSize = 14;
+
 
     columns =
         Math.floor(
             width / fontSize
         );
+
 
     drops =
         Array(columns).fill(1);
@@ -1182,8 +1370,14 @@ function resizeMatrix(){
 
 function drawMatrix(){
 
+    if(!canvas || !ctx){
+        return;
+    }
+
+
     ctx.fillStyle =
         "rgba(2,5,10,.09)";
+
 
     ctx.fillRect(
         0,
@@ -1192,7 +1386,9 @@ function drawMatrix(){
         height
     );
 
+
     const fontSize = 14;
+
 
     ctx.font =
         fontSize +
@@ -1212,6 +1408,7 @@ function drawMatrix(){
                     chars.length
                 )
             );
+
 
         ctx.fillStyle =
             Math.random() > .9
@@ -1235,6 +1432,7 @@ function drawMatrix(){
 
         }
 
+
         drops[i]++;
     }
 }
@@ -1242,10 +1440,12 @@ function drawMatrix(){
 
 resizeMatrix();
 
+
 window.addEventListener(
     "resize",
     resizeMatrix
 );
+
 
 setInterval(
     drawMatrix,
@@ -1253,7 +1453,9 @@ setInterval(
 );
 
 
-/* SERVICE WORKER */
+/* =====================================================
+   SERVICE WORKER
+===================================================== */
 
 if(
     "serviceWorker" in navigator
@@ -1264,11 +1466,20 @@ if(
         function(){
 
             navigator.serviceWorker.register(
-                "/static/sw.js"
-            ).catch(function(error){
-                
+                "/sw.js"
+            )
+            .then(function(registration){
+
                 console.log(
-                    "Service Worker:",
+                    "Service Worker registered:",
+                    registration.scope
+                );
+
+            })
+            .catch(function(error){
+
+                console.error(
+                    "Service Worker registration failed:",
                     error
                 );
 
@@ -1278,6 +1489,7 @@ if(
     );
 
 }
+
 
 </script>
 
