@@ -1,1 +1,1381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#02050a">
+<meta name="description" content="Tuhin Image Lab - Premium Reverse Image Finder">
 
+<link rel="manifest" href="/static/manifest.json">
+
+<title>Tuhin Image Lab</title>
+
+<style>
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+}
+
+:root{
+    --bg:#02050a;
+    --panel:rgba(7,16,28,.82);
+    --line:rgba(0,174,255,.25);
+    --blue:#00aaff;
+    --cyan:#00e5ff;
+    --text:#eef8ff;
+    --muted:#7890a5;
+}
+
+html{
+    scroll-behavior:smooth;
+}
+
+body{
+    min-height:100vh;
+    background:var(--bg);
+    color:var(--text);
+    font-family:Arial,Helvetica,sans-serif;
+    overflow-x:hidden;
+}
+
+/* MATRIX */
+
+#matrix{
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
+    z-index:-5;
+}
+
+.bg-glow{
+    position:fixed;
+    inset:0;
+    z-index:-4;
+    pointer-events:none;
+
+    background:
+        radial-gradient(
+            circle at 50% 20%,
+            rgba(0,150,255,.13),
+            transparent 45%
+        ),
+        linear-gradient(
+            rgba(0,0,0,.25),
+            rgba(0,0,0,.78)
+        );
+}
+
+.scanlines{
+    position:fixed;
+    inset:0;
+    z-index:-3;
+    pointer-events:none;
+
+    background:
+        repeating-linear-gradient(
+            to bottom,
+            rgba(255,255,255,.018) 0,
+            rgba(255,255,255,.018) 1px,
+            transparent 1px,
+            transparent 5px
+        );
+}
+
+/* APP */
+
+.app{
+    width:min(900px,94%);
+    margin:auto;
+    padding:22px 0 100px;
+}
+
+/* HEADER */
+
+.header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:15px;
+    margin-bottom:25px;
+}
+
+.brand{
+    display:flex;
+    align-items:center;
+    gap:12px;
+}
+
+.brand-icon{
+    width:45px;
+    height:45px;
+    border:1px solid var(--line);
+    border-radius:14px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    background:rgba(0,130,255,.08);
+
+    box-shadow:
+        0 0 20px rgba(0,170,255,.12);
+
+    font-size:22px;
+}
+
+.brand-name{
+    font-size:17px;
+    font-weight:bold;
+    letter-spacing:1px;
+}
+
+.brand-sub{
+    color:var(--muted);
+    font-size:10px;
+    margin-top:3px;
+    letter-spacing:1.5px;
+}
+
+.status{
+    display:flex;
+    align-items:center;
+    gap:7px;
+
+    padding:7px 10px;
+
+    border:1px solid rgba(0,220,255,.2);
+    border-radius:30px;
+
+    color:#7eeeff;
+    font-size:11px;
+
+    background:rgba(0,130,255,.06);
+}
+
+.status-dot{
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background:#00e5ff;
+
+    box-shadow:
+        0 0 10px #00e5ff;
+
+    animation:pulse 1.5s infinite;
+}
+
+@keyframes pulse{
+    50%{
+        opacity:.35;
+        transform:scale(.7);
+    }
+}
+
+/* HERO */
+
+.hero{
+    text-align:center;
+    padding:30px 10px 25px;
+}
+
+.badge{
+    display:inline-block;
+
+    padding:7px 12px;
+
+    border:1px solid rgba(0,180,255,.25);
+    border-radius:30px;
+
+    color:#75dfff;
+    background:rgba(0,140,255,.07);
+
+    font-size:11px;
+    letter-spacing:1.5px;
+
+    margin-bottom:15px;
+}
+
+.hero h1{
+    font-size:clamp(34px,8vw,62px);
+    line-height:1;
+    letter-spacing:-2px;
+
+    text-shadow:
+        0 0 15px rgba(0,180,255,.5),
+        0 0 40px rgba(0,100,255,.2);
+}
+
+.hero h1 span{
+    color:var(--cyan);
+}
+
+.hero p{
+    max-width:600px;
+    margin:17px auto 0;
+
+    color:#8199ae;
+    line-height:1.6;
+    font-size:14px;
+}
+
+/* PANEL */
+
+.panel{
+    position:relative;
+
+    padding:20px;
+
+    border:1px solid var(--line);
+    border-radius:24px;
+
+    background:var(--panel);
+
+    backdrop-filter:blur(18px);
+
+    box-shadow:
+        0 25px 80px rgba(0,0,0,.55),
+        inset 0 0 35px rgba(0,140,255,.025);
+
+    overflow:hidden;
+}
+
+.panel::before{
+    content:"";
+
+    position:absolute;
+    left:0;
+    top:0;
+
+    width:100%;
+    height:1px;
+
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            #00baff,
+            transparent
+        );
+
+    animation:topLine 3s linear infinite;
+}
+
+@keyframes topLine{
+    from{
+        transform:translateX(-100%);
+    }
+
+    to{
+        transform:translateX(100%);
+    }
+}
+
+/* UPLOAD */
+
+.upload{
+    min-height:280px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+
+    padding:30px;
+
+    border:1px dashed #17547a;
+    border-radius:20px;
+
+    cursor:pointer;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(0,150,255,.08),
+            transparent 65%
+        );
+
+    transition:.3s;
+}
+
+.upload:hover{
+    border-color:#00aaff;
+
+    box-shadow:
+        inset 0 0 30px rgba(0,150,255,.07),
+        0 0 30px rgba(0,150,255,.08);
+
+    transform:translateY(-2px);
+}
+
+.upload input{
+    display:none;
+}
+
+.upload-icon{
+    width:76px;
+    height:76px;
+
+    margin:auto auto 18px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    border:1px solid rgba(0,190,255,.3);
+    border-radius:22px;
+
+    background:rgba(0,140,255,.08);
+
+    font-size:32px;
+
+    box-shadow:
+        0 0 30px rgba(0,160,255,.08);
+}
+
+.upload-title{
+    font-size:20px;
+    font-weight:bold;
+}
+
+.upload-sub{
+    color:var(--muted);
+    margin-top:8px;
+    font-size:13px;
+}
+
+.file-info{
+    display:none;
+    margin-top:12px;
+    color:#69ddff;
+    font-size:12px;
+}
+
+/* PREVIEW */
+
+#preview{
+    display:none;
+
+    width:100%;
+    max-height:350px;
+
+    object-fit:contain;
+
+    margin-top:15px;
+
+    border-radius:18px;
+
+    border:1px solid #14537a;
+
+    background:#000;
+}
+
+/* URL */
+
+.url-area{
+    margin-top:15px;
+}
+
+.url-input{
+    width:100%;
+
+    padding:15px 16px;
+
+    border:1px solid #173b58;
+    border-radius:14px;
+
+    background:rgba(0,5,12,.65);
+
+    color:white;
+
+    outline:none;
+
+    font-size:14px;
+
+    transition:.25s;
+}
+
+.url-input:focus{
+    border-color:#00aaff;
+
+    box-shadow:
+        0 0 20px rgba(0,150,255,.1);
+}
+
+.url-input::placeholder{
+    color:#536b80;
+}
+
+/* BUTTON */
+
+.search-btn{
+    width:100%;
+
+    margin-top:15px;
+
+    padding:16px;
+
+    border:0;
+    border-radius:14px;
+
+    color:white;
+
+    font-size:15px;
+    font-weight:bold;
+
+    cursor:pointer;
+
+    background:
+        linear-gradient(
+            110deg,
+            #006ac7,
+            #00aaff,
+            #006ac7
+        );
+
+    background-size:200% 100%;
+
+    box-shadow:
+        0 10px 30px rgba(0,120,255,.15);
+
+    transition:.25s;
+}
+
+.search-btn:hover{
+    background-position:100% 0;
+
+    transform:translateY(-2px);
+
+    box-shadow:
+        0 15px 35px rgba(0,150,255,.25);
+}
+
+.search-btn:active{
+    transform:scale(.98);
+}
+
+/* SCANNER */
+
+.scanner{
+    display:none;
+    margin-top:20px;
+}
+
+.scan-frame{
+    position:relative;
+
+    width:100%;
+    height:320px;
+
+    overflow:hidden;
+
+    border:1px solid #087fba;
+    border-radius:20px;
+
+    background:#01060c;
+
+    box-shadow:
+        0 0 40px rgba(0,160,255,.12);
+}
+
+.scan-frame img{
+    width:100%;
+    height:100%;
+
+    object-fit:contain;
+
+    opacity:.75;
+}
+
+.scan-grid{
+    position:absolute;
+    inset:0;
+
+    background:
+        linear-gradient(
+            rgba(0,170,255,.08) 1px,
+            transparent 1px
+        ),
+        linear-gradient(
+            90deg,
+            rgba(0,170,255,.08) 1px,
+            transparent 1px
+        );
+
+    background-size:35px 35px;
+}
+
+.scan-line{
+    position:absolute;
+
+    left:0;
+
+    width:100%;
+    height:3px;
+
+    background:#00e5ff;
+
+    box-shadow:
+        0 0 20px #00e5ff,
+        0 0 50px #008cff;
+
+    animation:scan 2s linear infinite;
+}
+
+@keyframes scan{
+    0%{
+        top:0;
+    }
+
+    50%{
+        top:calc(100% - 3px);
+    }
+
+    100%{
+        top:0;
+    }
+}
+
+.scanning-text{
+    text-align:center;
+    margin-top:15px;
+
+    color:#65dfff;
+
+    font-size:14px;
+    letter-spacing:1px;
+}
+
+/* ERROR */
+
+.error{
+    margin-top:18px;
+
+    padding:14px;
+
+    border:1px solid #7c2937;
+    border-radius:14px;
+
+    background:rgba(90,10,25,.45);
+
+    color:#ff9eaa;
+
+    font-size:13px;
+}
+
+/* RESULTS */
+
+.results{
+    margin-top:25px;
+}
+
+.section-title{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+
+    margin-bottom:13px;
+}
+
+.section-title h2{
+    font-size:19px;
+}
+
+.count{
+    color:#6edfff;
+    font-size:11px;
+}
+
+.result{
+    display:block;
+
+    padding:15px;
+    margin-bottom:12px;
+
+    border:1px solid #16344c;
+    border-radius:16px;
+
+    background:rgba(5,15,27,.8);
+
+    text-decoration:none;
+    color:white;
+
+    transition:.25s;
+}
+
+.result:hover{
+    border-color:#00aaff;
+
+    transform:translateY(-2px);
+
+    box-shadow:
+        0 10px 30px rgba(0,130,255,.1);
+}
+
+.result-top{
+    display:flex;
+    align-items:center;
+    gap:12px;
+}
+
+.result-thumb{
+    width:64px;
+    height:64px;
+
+    flex-shrink:0;
+
+    border-radius:12px;
+
+    object-fit:cover;
+
+    border:1px solid #173d58;
+
+    background:#02070d;
+}
+
+.result-number{
+    color:#4e9fc9;
+    font-size:11px;
+}
+
+.result-title{
+    margin-top:4px;
+
+    font-size:14px;
+    font-weight:bold;
+
+    line-height:1.4;
+}
+
+.result-link{
+    margin-top:9px;
+
+    color:#61caff;
+
+    font-size:11px;
+
+    word-break:break-all;
+}
+
+.similarity{
+    display:inline-block;
+
+    margin-top:9px;
+
+    padding:5px 8px;
+
+    border-radius:7px;
+
+    color:#6de8ff;
+
+    border:1px solid rgba(0,180,255,.2);
+
+    background:rgba(0,150,255,.07);
+
+    font-size:10px;
+}
+
+.no-results{
+    margin-top:20px;
+
+    padding:25px;
+
+    text-align:center;
+
+    border:1px solid #16344c;
+    border-radius:16px;
+
+    color:#758ca0;
+
+    background:rgba(5,15,27,.7);
+}
+
+/* CREATOR */
+
+.creator{
+    text-align:center;
+
+    margin-top:25px;
+
+    color:#476276;
+
+    font-size:10px;
+
+    letter-spacing:2px;
+}
+
+/* BOTTOM APP NAV */
+
+.bottom-nav{
+    position:fixed;
+
+    left:50%;
+    bottom:12px;
+
+    transform:translateX(-50%);
+
+    width:min(430px,92%);
+
+    display:flex;
+    justify-content:space-around;
+
+    padding:9px;
+
+    border:1px solid rgba(0,170,255,.2);
+    border-radius:20px;
+
+    background:rgba(2,8,15,.82);
+
+    backdrop-filter:blur(18px);
+
+    box-shadow:
+        0 10px 40px rgba(0,0,0,.55);
+
+    z-index:20;
+}
+
+.nav-item{
+    flex:1;
+
+    text-align:center;
+
+    color:#5d7589;
+
+    font-size:10px;
+
+    padding:7px;
+
+    border-radius:12px;
+
+    cursor:pointer;
+}
+
+.nav-item.active{
+    color:#65ddff;
+
+    background:rgba(0,150,255,.08);
+
+    box-shadow:
+        inset 0 0 15px rgba(0,150,255,.04);
+}
+
+.nav-icon{
+    display:block;
+    font-size:17px;
+    margin-bottom:3px;
+}
+
+/* MOBILE */
+
+@media(max-width:600px){
+
+    .app{
+        width:92%;
+        padding-top:15px;
+    }
+
+    .status{
+        display:none;
+    }
+
+    .hero{
+        padding-top:20px;
+    }
+
+    .panel{
+        padding:12px;
+        border-radius:20px;
+    }
+
+    .upload{
+        min-height:245px;
+    }
+
+    .scan-frame{
+        height:280px;
+    }
+
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="matrix"></canvas>
+
+<div class="bg-glow"></div>
+<div class="scanlines"></div>
+
+<main class="app">
+
+<header class="header">
+
+    <div class="brand">
+
+        <div class="brand-icon">
+            🔬
+        </div>
+
+        <div>
+            <div class="brand-name">
+                TUHIN // IMAGE LAB
+            </div>
+
+            <div class="brand-sub">
+                REVERSE IMAGE INTELLIGENCE
+            </div>
+        </div>
+
+    </div>
+
+    <div class="status">
+        <span class="status-dot"></span>
+        SYSTEM ONLINE
+    </div>
+
+</header>
+
+
+<section class="hero">
+
+    <div class="badge">
+        ⚡ PREMIUM IMAGE ANALYSIS
+    </div>
+
+    <h1>
+        REVERSE<br>
+        <span>IMAGE SCANNER</span>
+    </h1>
+
+    <p>
+        Find pages and websites where an image appears
+        using a fast visual search interface.
+    </p>
+
+</section>
+
+
+<section class="panel">
+
+<form
+    method="POST"
+    action="/search"
+    enctype="multipart/form-data"
+    onsubmit="return startScan()"
+>
+
+<label class="upload">
+
+    <input
+        type="file"
+        name="image"
+        accept="image/*"
+        onchange="previewImage(event)"
+    >
+
+    <div>
+
+        <div class="upload-icon">
+            📷
+        </div>
+
+        <div class="upload-title">
+            Upload Image
+        </div>
+
+        <div class="upload-sub">
+            Tap to select an image from your device
+        </div>
+
+        <div
+            class="file-info"
+            id="fileInfo"
+        ></div>
+
+    </div>
+
+</label>
+
+
+<img
+    id="preview"
+    alt="Selected image"
+>
+
+
+<div class="url-area">
+
+    <input
+        class="url-input"
+        type="url"
+        name="image_url"
+        placeholder="Or paste an image URL..."
+    >
+
+</div>
+
+
+<button
+    class="search-btn"
+    type="submit"
+>
+    ⚡ START IMAGE SCAN
+</button>
+
+</form>
+
+
+<div
+    class="scanner"
+    id="scanner"
+>
+
+    <div class="scan-frame">
+
+        <img
+            id="scanImage"
+            alt="Scanning image"
+        >
+
+        <div class="scan-grid"></div>
+
+        <div class="scan-line"></div>
+
+    </div>
+
+    <div class="scanning-text">
+        ANALYZING IMAGE<span id="dots"></span>
+    </div>
+
+</div>
+
+</section>
+
+
+{% if error %}
+
+<div class="error">
+    ⚠️ {{ error }}
+</div>
+
+{% endif %}
+
+
+{% if results %}
+
+<section class="results">
+
+    <div class="section-title">
+
+        <h2>
+            🔎 Visual Matches
+        </h2>
+
+        <div class="count">
+            {{ results|length }} RESULTS
+        </div>
+
+    </div>
+
+
+    {% for result in results %}
+
+    <a
+        class="result"
+        href="{{ result.link }}"
+        target="_blank"
+        rel="noopener noreferrer"
+    >
+
+        <div class="result-top">
+
+            {% if result.thumbnail %}
+
+            <img
+                class="result-thumb"
+                src="{{ result.thumbnail }}"
+                alt=""
+                loading="lazy"
+            >
+
+            {% else %}
+
+            <div class="result-thumb"></div>
+
+            {% endif %}
+
+
+            <div>
+
+                <div class="result-number">
+                    MATCH #{{ loop.index }}
+                </div>
+
+                <div class="result-title">
+                    {{ result.title }}
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="similarity">
+            Visual score:
+            {{ result.similarity }}%
+        </div>
+
+
+        <div class="result-link">
+            {{ result.link }}
+        </div>
+
+    </a>
+
+    {% endfor %}
+
+</section>
+
+
+{% elif searched and not error %}
+
+<div class="no-results">
+
+    🔍 No visual matches were found.
+
+</div>
+
+{% endif %}
+
+
+<div class="creator">
+    BUILT BY TUHIN • TUHIN IMAGE LAB
+</div>
+
+</main>
+
+
+<nav class="bottom-nav">
+
+    <div class="nav-item active">
+        <span class="nav-icon">⌂</span>
+        SCAN
+    </div>
+
+    <div class="nav-item">
+        <span class="nav-icon">◈</span>
+        RESULTS
+    </div>
+
+    <div class="nav-item">
+        <span class="nav-icon">⚙</span>
+        SYSTEM
+    </div>
+
+</nav>
+
+
+<script>
+
+/* =====================================================
+   IMAGE PREVIEW
+===================================================== */
+
+function previewImage(event){
+
+    const file =
+        event.target.files[0];
+
+    if(!file){
+        return;
+    }
+
+    const preview =
+        document.getElementById("preview");
+
+    const fileInfo =
+        document.getElementById("fileInfo");
+
+    preview.src =
+        URL.createObjectURL(file);
+
+    preview.style.display =
+        "block";
+
+    fileInfo.textContent =
+        file.name +
+        " • " +
+        formatBytes(file.size);
+
+    fileInfo.style.display =
+        "block";
+}
+
+
+function formatBytes(bytes){
+
+    if(bytes === 0){
+        return "0 Bytes";
+    }
+
+    const sizes =
+        ["Bytes","KB","MB","GB"];
+
+    const i =
+        Math.floor(
+            Math.log(bytes) /
+            Math.log(1024)
+        );
+
+    return (
+        Math.round(
+            bytes /
+            Math.pow(1024,i) *
+            100
+        ) / 100
+        +
+        " " +
+        sizes[i]
+    );
+}
+
+
+/* =====================================================
+   SCANNER
+===================================================== */
+
+function startScan(){
+
+    const fileInput =
+        document.querySelector(
+            'input[name="image"]'
+        );
+
+    const urlInput =
+        document.querySelector(
+            'input[name="image_url"]'
+        );
+
+    const scanner =
+        document.getElementById(
+            "scanner"
+        );
+
+    const scanImage =
+        document.getElementById(
+            "scanImage"
+        );
+
+
+    if(
+        fileInput &&
+        fileInput.files.length > 0
+    ){
+
+        scanImage.src =
+            URL.createObjectURL(
+                fileInput.files[0]
+            );
+
+    }else if(
+        urlInput &&
+        urlInput.value.trim()
+    ){
+
+        scanImage.src =
+            urlInput.value.trim();
+
+    }else{
+
+        alert(
+            "Please upload an image or provide an image URL."
+        );
+
+        return false;
+    }
+
+
+    scanner.style.display =
+        "block";
+
+
+    window.scrollTo({
+        top:scanner.offsetTop,
+        behavior:"smooth"
+    });
+
+
+    return true;
+}
+
+
+/* =====================================================
+   SCANNING DOTS
+===================================================== */
+
+let dotCount = 0;
+
+setInterval(function(){
+
+    const dots =
+        document.getElementById("dots");
+
+    if(!dots){
+        return;
+    }
+
+    dotCount =
+        (dotCount + 1) % 4;
+
+    dots.textContent =
+        ".".repeat(dotCount);
+
+},500);
+
+
+/* =====================================================
+   MATRIX
+===================================================== */
+
+const canvas =
+    document.getElementById("matrix");
+
+const ctx =
+    canvas.getContext("2d");
+
+let width;
+let height;
+let columns;
+let drops;
+
+const chars =
+    "01ABCDEFGHIJKLMNOPQRSTUVWXYZ<>[]{}#$%";
+
+function resizeMatrix(){
+
+    width =
+        canvas.width =
+        window.innerWidth;
+
+    height =
+        canvas.height =
+        window.innerHeight;
+
+    const fontSize = 14;
+
+    columns =
+        Math.floor(
+            width / fontSize
+        );
+
+    drops =
+        Array(columns).fill(1);
+}
+
+
+function drawMatrix(){
+
+    ctx.fillStyle =
+        "rgba(2,5,10,.09)";
+
+    ctx.fillRect(
+        0,
+        0,
+        width,
+        height
+    );
+
+    const fontSize = 14;
+
+    ctx.font =
+        fontSize +
+        "px monospace";
+
+
+    for(
+        let i = 0;
+        i < drops.length;
+        i++
+    ){
+
+        const char =
+            chars.charAt(
+                Math.floor(
+                    Math.random() *
+                    chars.length
+                )
+            );
+
+        ctx.fillStyle =
+            Math.random() > .9
+            ? "#00d9ff"
+            : "#0876aa";
+
+
+        ctx.fillText(
+            char,
+            i * fontSize,
+            drops[i] * fontSize
+        );
+
+
+        if(
+            drops[i] * fontSize > height &&
+            Math.random() > .975
+        ){
+
+            drops[i] = 0;
+
+        }
+
+        drops[i]++;
+    }
+}
+
+
+resizeMatrix();
+
+window.addEventListener(
+    "resize",
+    resizeMatrix
+);
+
+setInterval(
+    drawMatrix,
+    45
+);
+
+
+/* =====================================================
+   SERVICE WORKER
+===================================================== */
+
+if(
+    "serviceWorker" in navigator
+){
+
+    window.addEventListener(
+        "load",
+        function(){
+
+            navigator.serviceWorker.register(
+                "/static/sw.js"
+            ).catch(function(error){
+
+                console.log(
+                    "Service Worker:",
+                    error
+                );
+
+            });
+
+        }
+    );
+
+}
+
+</script>
+
+</body>
+  </html>
