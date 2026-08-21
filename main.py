@@ -1,6 +1,5 @@
 import io
 import os
-import base64
 import requests
 
 from PIL import Image, UnidentifiedImageError
@@ -13,16 +12,18 @@ app = Flask(__name__)
 # CONFIGURATION
 # =========================================================
 
-# Maximum browser upload size
+# Browser upload limit = 30 MB
 app.config["MAX_CONTENT_LENGTH"] = 30 * 1024 * 1024
 
-SERPAPI_URL = "https://serpapi.com/search.json"
+SERPAPI_SEARCH_URL = "https://serpapi.com/search.json"
+SERPAPI_IMAGE_URL = "https://serpapi.com/image"
 
 REQUEST_TIMEOUT = 60
 
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-    "AppleWebKit/537.36 Chrome/120 Safari/537.36"
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/120.0 Safari/537.36"
 )
 
 
@@ -41,7 +42,7 @@ def render_error(message):
 
 
 # =========================================================
-# COMPRESS IMAGE FOR SERPAPI
+# PREPARE UPLOADED IMAGE
 # =========================================================
 
 def prepare_image(file_data):
@@ -54,32 +55,62 @@ def prepare_image(file_data):
 
         image.load()
 
-        # Convert unusual formats to RGB
-        if image.mode not in ("RGB", "L"):
+        # Convert to RGB
+        if image.mode != "RGB":
             image = image.convert("RGB")
 
-        # Resize large images
-        max_size = 1600
+        # Prevent extremely large images
+        max_dimension = 1400
 
         image.thumbnail(
-            (max_size, max_size),
+            (max_dimension, max_dimension),
             Image.Resampling.LANCZOS
         )
 
-        output = io.BytesIO()
+        # Try several JPEG qualities until <= 500 KB
+        for quality in (80, 70, 60, 50, 40, 30):
 
-        # JPEG keeps memory and upload size low
-        if image.mode == "L":
-            image = image.convert("RGB")
+            output = io.BytesIO()
 
-        image.save(
-            output,
-            format="JPEG",
-            quality=85,
-            optimize=True
-        )
+            image.save(
+                output,
+                format="JPEG",
+                quality=quality,
+                optimize=True
+            )
 
-        return output.getvalue()
+            result = output.getvalue()
+
+            if len(result) <= 500 * 1024:
+
+                return result
+
+        # If still too large, resize further
+        for dimension in (1100, 900, 700, 500):
+
+            small_image = image.copy()
+
+            small_image.thumbnail(
+                (dimension, dimension),
+                Image.Resampling.LANCZOS
+            )
+
+            output = io.BytesIO()
+
+            small_image.save(
+                output,
+                format="JPEG",
+                quality=35,
+                optimize=True
+            )
+
+            result = output.getvalue()
+
+            if len(result) <= 500 * 1024:
+
+                return result
+
+        return None
 
     except (
         UnidentifiedImageError,
@@ -95,33 +126,118 @@ def prepare_image(file_data):
 
 
 # =========================================================
-# SERPAPI IMAGE SEARCH
+# UPLOAD IMAGE TO SERPAPI IMAGE API
 # =========================================================
 
-def search_with_serpapi(
+def upload_image_to_serpapi(
     image_data,
     serpapi_key
 ):
 
     try:
 
-        # Convert image to base64
-        encoded_image = base64.b64encode(
-            image_data
-        ).decode("utf-8")
+        response = requests.post(
 
-        # SerpApi Google Lens can receive an image URL.
-        # We use a data URL here.
-        data_url = (
-            "data:image/jpeg;base64,"
-            + encoded_image
+            SERPAPI_IMAGE_URL,
+
+            files={
+                "image": (
+                    "image.jpg",
+                    image_data,
+                    "image/jpeg"
+                )
+            },
+
+            data={
+                "api_key": serpapi_key
+            },
+
+            headers={
+                "User-Agent": USER_AGENT
+            },
+
+            timeout=REQUEST_TIMEOUT
         )
+
+        # Try JSON first
+        try:
+
+            data = response.json()
+
+        except ValueError:
+
+            data = {}
+
+        # HTTP error
+        if not response.ok:
+
+            error_message = (
+                data.get("error")
+                or data.get("message")
+                or (
+                    "SerpApi Image API returned HTTP "
+                    + str(response.status_code)
+                )
+            )
+
+            return None, error_message
+
+        # SerpApi API error
+        if data.get("error"):
+
+            return None, str(
+                data.get("error")
+            )
+
+        image_id = data.get(
+            "image_id"
+        )
+
+        if not image_id:
+
+            return None, (
+                "SerpApi did not return an image_id."
+            )
+
+        return image_id, None
+
+    except requests.Timeout:
+
+        return None, (
+            "Image upload to SerpApi timed out."
+        )
+
+    except requests.RequestException as e:
+
+        return None, (
+            "Could not upload image to SerpApi: "
+            + str(e)
+        )
+
+    except Exception as e:
+
+        return None, (
+            "Unexpected image upload error: "
+            + str(e)
+        )
+
+
+# =========================================================
+# GOOGLE LENS SEARCH USING IMAGE ID
+# =========================================================
+
+def search_with_image_id(
+    image_id,
+    serpapi_key
+):
+
+    try:
 
         params = {
 
             "engine": "google_lens",
 
-            "url": data_url,
+            "image_id": image_id,
 
             "api_key": serpapi_key,
 
@@ -133,7 +249,7 @@ def search_with_serpapi(
 
         response = requests.get(
 
-            SERPAPI_URL,
+            SERPAPI_SEARCH_URL,
 
             params=params,
 
@@ -142,10 +258,7 @@ def search_with_serpapi(
             },
 
             timeout=REQUEST_TIMEOUT
-
         )
-
-        response.raise_for_status()
 
         try:
 
@@ -153,14 +266,26 @@ def search_with_serpapi(
 
         except ValueError:
 
-            return None, "SerpApi returned an invalid response."
+            return None, (
+                "SerpApi returned an invalid response."
+            )
+
+        if not response.ok:
+
+            error_message = (
+                data.get("error")
+                or (
+                    "SerpApi returned HTTP "
+                    + str(response.status_code)
+                )
+            )
+
+            return None, error_message
 
         if data.get("error"):
 
             return None, str(
-                data.get(
-                    "error"
-                )
+                data.get("error")
             )
 
         return data, None
@@ -168,23 +293,264 @@ def search_with_serpapi(
     except requests.Timeout:
 
         return None, (
-            "SerpApi request timed out. "
+            "Google Lens search timed out. "
             "Please try again."
         )
 
     except requests.RequestException as e:
 
         return None, (
-            "SerpApi request failed: "
+            "Google Lens request failed: "
             + str(e)
         )
 
     except Exception as e:
 
         return None, (
-            "Unexpected search error: "
+            "Unexpected Google Lens error: "
             + str(e)
         )
+
+
+# =========================================================
+# GOOGLE LENS SEARCH USING PUBLIC URL
+# =========================================================
+
+def search_with_url(
+    image_url,
+    serpapi_key
+):
+
+    try:
+
+        params = {
+
+            "engine": "google_lens",
+
+            "url": image_url,
+
+            "api_key": serpapi_key,
+
+            "hl": "en",
+
+            "country": "us"
+
+        }
+
+        response = requests.get(
+
+            SERPAPI_SEARCH_URL,
+
+            params=params,
+
+            headers={
+                "User-Agent": USER_AGENT
+            },
+
+            timeout=REQUEST_TIMEOUT
+        )
+
+        try:
+
+            data = response.json()
+
+        except ValueError:
+
+            return None, (
+                "SerpApi returned an invalid response."
+            )
+
+        if not response.ok:
+
+            error_message = (
+                data.get("error")
+                or (
+                    "SerpApi returned HTTP "
+                    + str(response.status_code)
+                )
+            )
+
+            return None, error_message
+
+        if data.get("error"):
+
+            return None, str(
+                data.get("error")
+            )
+
+        return data, None
+
+    except requests.Timeout:
+
+        return None, (
+            "Google Lens search timed out. "
+            "Please try again."
+        )
+
+    except requests.RequestException as e:
+
+        return None, (
+            "Google Lens request failed: "
+            + str(e)
+        )
+
+    except Exception as e:
+
+        return None, (
+            "Unexpected Google Lens error: "
+            + str(e)
+        )
+
+
+# =========================================================
+# PROCESS SERPAPI RESULTS
+# =========================================================
+
+def process_results(data):
+
+    results = []
+
+    # -----------------------------------------------------
+    # VISUAL MATCHES
+    # -----------------------------------------------------
+
+    visual_matches = data.get(
+        "visual_matches",
+        []
+    )
+
+    if not isinstance(
+        visual_matches,
+        list
+    ):
+
+        visual_matches = []
+
+    for item in visual_matches[:20]:
+
+        if not isinstance(
+            item,
+            dict
+        ):
+
+            continue
+
+        link = item.get(
+            "link",
+            ""
+        )
+
+        if not link:
+
+            continue
+
+        title = item.get(
+            "title",
+            "Untitled"
+        )
+
+        thumbnail = item.get(
+            "thumbnail",
+            ""
+        )
+
+        results.append({
+
+            "title": title or "Untitled",
+
+            "link": link,
+
+            "thumbnail": thumbnail,
+
+            "similarity": "—"
+
+        })
+
+    # -----------------------------------------------------
+    # EXACT MATCHES
+    # -----------------------------------------------------
+
+    exact_matches = data.get(
+        "exact_matches",
+        []
+    )
+
+    if isinstance(
+        exact_matches,
+        list
+    ):
+
+        for item in exact_matches[:10]:
+
+            if not isinstance(
+                item,
+                dict
+            ):
+
+                continue
+
+            link = item.get(
+                "link",
+                ""
+            )
+
+            if not link:
+
+                continue
+
+            title = item.get(
+                "title",
+                "Exact Match"
+            )
+
+            thumbnail = item.get(
+                "thumbnail",
+                ""
+            )
+
+            results.append({
+
+                "title": title or "Exact Match",
+
+                "link": link,
+
+                "thumbnail": thumbnail,
+
+                "similarity": "Exact"
+
+            })
+
+    # -----------------------------------------------------
+    # REMOVE DUPLICATES
+    # -----------------------------------------------------
+
+    unique_results = []
+
+    seen_links = set()
+
+    for result in results:
+
+        link = result.get(
+            "link"
+        )
+
+        if not link:
+
+            continue
+
+        if link in seen_links:
+
+            continue
+
+        seen_links.add(
+            link
+        )
+
+        unique_results.append(
+            result
+        )
+
+    return unique_results[:30]
 
 
 # =========================================================
@@ -236,7 +602,6 @@ def search():
 
     )
 
-
     if not serpapi_key:
 
         return render_error(
@@ -248,7 +613,7 @@ def search():
 
 
     # -----------------------------------------------------
-    # GET UPLOADED FILE
+    # GET FILE
     # -----------------------------------------------------
 
     uploaded_file = request.files.get(
@@ -257,7 +622,7 @@ def search():
 
 
     # -----------------------------------------------------
-    # GET IMAGE URL
+    # GET URL
     # -----------------------------------------------------
 
     image_url = request.form.get(
@@ -266,11 +631,8 @@ def search():
     ).strip()
 
 
-    image_data = None
-
-
     # =====================================================
-    # OPTION 1: UPLOADED IMAGE
+    # UPLOADED IMAGE
     # =====================================================
 
     if (
@@ -288,14 +650,9 @@ def search():
                     "The selected image is empty."
                 )
 
-
-            # -------------------------------------------------
-            # SIZE CHECK
-            # -------------------------------------------------
-
-            if (
-                len(original_data)
-                > 30 * 1024 * 1024
+            # 30 MB maximum
+            if len(original_data) > (
+                30 * 1024 * 1024
             ):
 
                 return render_error(
@@ -303,22 +660,20 @@ def search():
                     "Maximum size is 30 MB."
                 )
 
-
-            # -------------------------------------------------
-            # PREPARE IMAGE
-            # -------------------------------------------------
-
+            # Compress to <= 500 KB
             image_data = prepare_image(
                 original_data
             )
 
+            # Release original image data
+            original_data = None
 
             if not image_data:
 
                 return render_error(
-                    "The selected file is not a valid image."
+                    "Could not compress the image "
+                    "to the required size."
                 )
-
 
         except Exception as e:
 
@@ -328,78 +683,55 @@ def search():
             )
 
 
+        # -------------------------------------------------
+        # SERPAPI IMAGE API
+        # -------------------------------------------------
+
+        image_id, error = (
+            upload_image_to_serpapi(
+                image_data,
+                serpapi_key
+            )
+        )
+
+        # Release image memory
+        image_data = None
+
+        if error:
+
+            return render_error(
+                "Image upload failed: "
+                + error
+            )
+
+
+        # -------------------------------------------------
+        # GOOGLE LENS
+        # -------------------------------------------------
+
+        data, error = search_with_image_id(
+
+            image_id,
+
+            serpapi_key
+
+        )
+
+
     # =====================================================
-    # OPTION 2: IMAGE URL
+    # IMAGE URL
     # =====================================================
 
     elif image_url:
 
-        try:
+        # Public URL goes directly to Google Lens.
+        data, error = search_with_url(
 
-            response = requests.get(
+            image_url,
 
-                image_url,
+            serpapi_key
 
-                headers={
-                    "User-Agent": USER_AGENT
-                },
-
-                timeout=30
-
-            )
-
-            response.raise_for_status()
-
-            if not response.content:
-
-                return render_error(
-                    "The image URL returned an empty file."
-                )
-
-
-            if (
-                len(response.content)
-                > 30 * 1024 * 1024
-            ):
-
-                return render_error(
-                    "The remote image is larger than 30 MB."
-                )
-
-
-            image_data = prepare_image(
-                response.content
-            )
-
-
-            if not image_data:
-
-                return render_error(
-                    "The provided URL does not contain a valid image."
-                )
-
-
-        except requests.Timeout:
-
-            return render_error(
-                "Downloading the image timed out."
-            )
-
-
-        except requests.RequestException as e:
-
-            return render_error(
-                "Could not download image: "
-                + str(e)
-            )
-
-
-        except Exception as e:
-
-            return render_error(
-                "Could not process image: "
-                + str(e)
-            )
+        )
 
 
     # =====================================================
@@ -417,21 +749,8 @@ def search():
 
 
     # =====================================================
-    # GOOGLE LENS SEARCH
+    # CHECK SEARCH ERROR
     # =====================================================
-
-    data, error = search_with_serpapi(
-
-        image_data,
-
-        serpapi_key
-
-    )
-
-
-    # Release image memory
-    image_data = None
-
 
     if error:
 
@@ -451,175 +770,13 @@ def search():
     # PROCESS RESULTS
     # =====================================================
 
-    results = []
-
-
-    visual_matches = data.get(
-        "visual_matches",
-        []
+    results = process_results(
+        data
     )
 
 
-    if not isinstance(
-        visual_matches,
-        list
-    ):
-
-        visual_matches = []
-
-
-    # Limit results to keep Render memory low
-    visual_matches = visual_matches[:20]
-
-
-    for item in visual_matches:
-
-        if not isinstance(
-            item,
-            dict
-        ):
-
-            continue
-
-
-        link = item.get(
-            "link",
-            ""
-        )
-
-
-        if not link:
-
-            continue
-
-
-        title = item.get(
-            "title",
-            "Untitled"
-        )
-
-
-        thumbnail = item.get(
-            "thumbnail",
-            ""
-        )
-
-
-        # SerpApi already provides
-        # visual search results.
-        # No extra imagehash processing.
-
-
-        results.append({
-
-            "title": title,
-
-            "link": link,
-
-            "thumbnail": thumbnail,
-
-            "similarity": "—"
-
-        })
-
-
     # =====================================================
-    # EXACT MATCHES
-    # =====================================================
-
-    exact_matches = data.get(
-        "exact_matches",
-        []
-    )
-
-
-    if isinstance(
-        exact_matches,
-        list
-    ):
-
-        for item in exact_matches[:10]:
-
-            if not isinstance(
-                item,
-                dict
-            ):
-
-                continue
-
-
-            link = item.get(
-                "link",
-                ""
-            )
-
-
-            if not link:
-
-                continue
-
-
-            title = item.get(
-                "title",
-                "Exact Match"
-            )
-
-
-            thumbnail = item.get(
-                "thumbnail",
-                ""
-            )
-
-
-            results.append({
-
-                "title": title,
-
-                "link": link,
-
-                "thumbnail": thumbnail,
-
-                "similarity": "Exact"
-
-            })
-
-
-    # =====================================================
-    # REMOVE DUPLICATE LINKS
-    # =====================================================
-
-    unique_results = []
-
-    seen_links = set()
-
-
-    for result in results:
-
-        link = result.get(
-            "link"
-        )
-
-
-        if link in seen_links:
-
-            continue
-
-
-        seen_links.add(
-            link
-        )
-
-
-        unique_results.append(
-            result
-        )
-
-
-    results = unique_results[:30]
-
-
-    # =====================================================
-    # RETURN RESULTS
+    # SHOW RESULTS
     # =====================================================
 
     return render_template(
@@ -645,13 +802,13 @@ def request_entity_too_large(error):
     return render_error(
 
         "Image is too large. "
-        "Maximum upload size is 30 MB."
+        "Maximum size is 30 MB."
 
     ), 413
 
 
 # =========================================================
-# GENERAL ERROR
+# GENERAL SERVER ERROR
 # =========================================================
 
 @app.errorhandler(500)
@@ -679,7 +836,6 @@ if __name__ == "__main__":
         )
 
     )
-
 
     app.run(
 
