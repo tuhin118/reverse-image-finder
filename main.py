@@ -4,6 +4,7 @@ import requests
 
 from PIL import Image, UnidentifiedImageError
 from flask import Flask, request, render_template
+from visitor_counter import add_visit, get_visits
 
 
 app = Flask(__name__)
@@ -554,6 +555,29 @@ def process_results(data):
 
 
 # =========================================================
+# VISITOR SETTINGS
+# =========================================================
+
+@app.route(
+    "/visitor-settings",
+    methods=["GET"]
+)
+def visitor_settings():
+
+    visits = get_visits()
+
+    return render_template(
+
+        "visitor-settings.html",
+
+        today=visits["today"],
+
+        total=visits["total"]
+
+    )
+
+
+# =========================================================
 # HOME
 # =========================================================
 
@@ -562,6 +586,9 @@ def process_results(data):
     methods=["GET"]
 )
 def home():
+
+    # Count one visit when the homepage is opened
+    add_visit()
 
     return render_template(
 
