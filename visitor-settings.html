@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Visitor Settings</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      background: #08090d;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .visitor-container {
+      width: 100%;
+      max-width: 430px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .visitor-card {
+      position: relative;
+      padding: 18px 16px;
+      border-radius: 16px;
+      background: linear-gradient(145deg, #15171e, #0d0f14);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow:
+        0 10px 30px rgba(0, 0, 0, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      overflow: hidden;
+    }
+
+    .visitor-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 18px;
+      right: 18px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #7c5cff, transparent);
+      opacity: 0.8;
+    }
+
+    .visitor-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: #8f94a3;
+      margin-bottom: 9px;
+      letter-spacing: 0.2px;
+    }
+
+    .visitor-number {
+      font-size: 27px;
+      line-height: 1;
+      font-weight: 700;
+      letter-spacing: -0.8px;
+      color: #ffffff;
+    }
+
+    @media (max-width: 360px) {
+      .visitor-container {
+        gap: 9px;
+      }
+
+      .visitor-card {
+        padding: 15px 13px;
+      }
+
+      .visitor-label {
+        font-size: 11px;
+      }
+
+      .visitor-number {
+        font-size: 23px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="visitor-container">
+
+    <div class="visitor-card">
+      <div class="visitor-label">Today Visit</div>
+      <div class="visitor-number" id="todayVisit">0</div>
+    </div>
+
+    <div class="visitor-card">
+      <div class="visitor-label">Total Visit</div>
+      <div class="visitor-number" id="totalVisit">0</div>
+    </div>
+
+  </div>
+
+  <script>
+    /*
+      Visitor Settings
+      -----------------
+      এই ফাইলের UI আলাদা রাখা হয়েছে।
+      পরবর্তীতে এখানে visitor data connection করা যাবে।
+    */
+
+    const todayVisit = document.getElementById("todayVisit");
+    const totalVisit = document.getElementById("totalVisit");
+
+    todayVisit.textContent = "0";
+    totalVisit.textContent = "0";
+  </script>
+
+</body>
+</html>
